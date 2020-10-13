@@ -1,6 +1,9 @@
-from database_pkg import db
+import database_pkg as dpk
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
+
+db = dpk.db
 
 
 class Mouse(db.Model):
@@ -11,6 +14,8 @@ class Mouse(db.Model):
     genotype = db.Column(db.Boolean, nullable=False)
     sex = db.Column(db.String)
 
+    participant_details = relationship("ParticipantDetail")
+
     def __repr__(self):
         return f"< Mouse {self.eartag} >"
 
@@ -20,6 +25,8 @@ class Experiment(db.Model):
     experiment_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     experiment_dir = db.Column(db.String, nullable=False, unique=True)
     experiment_name = db.Column(db.String, nullable=False, unique=True)
+    participant_detail = relationship("ParticipantDetail", backref="experiments")
+    session_re = db.Column(db.String, nullable=True)
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
@@ -32,6 +39,8 @@ class Reviewer(db.Model):
     last_name = db.Column(db.String, nullable=False)
     toScore_dir = db.Column(db.String, nullable=False, unique=True)
     scored_dir = db.Column(db.String, nullable=False, unique=True)
+
+    scored_folders = relationship("BlindFolder")
 
 
 class ParticipantDetail(db.Model):
@@ -54,6 +63,9 @@ class Session(db.Model):
     session_dir = db.Column(db.String, nullable=False, unique=True)
     session_num = db.Column(db.Integer, nullable=False)
 
+    folders = relationship("Folder")
+    trials = relationship("Trial")
+
 
 class Folder(db.Model):
     __tablename__ = 'folders'
@@ -63,6 +75,8 @@ class Folder(db.Model):
     original_video = db.Column(db.String, nullable=True, unique=True)
     trial_frame_number_file = db.Column(db.String, nullable=False, unique=True)
 
+    score_files = relationship("BlindFolder")
+
 
 class BlindFolder(db.Model):
     __tablename__ = 'blind_folders'
@@ -70,6 +84,8 @@ class BlindFolder(db.Model):
     folder_id = db.Column(UUID, db.ForeignKey('folders.folder_id'), nullable=False)
     reviewer_id = db.Column(UUID, db.ForeignKey('reviewers.reviewer_id'), nullable=False)
     blind_name = db.Column(db.String, nullable=False, unique=True)
+
+    blind_trials = relationship("BlindTrial")
 
 
 class Trial(db.Model):
