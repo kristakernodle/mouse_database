@@ -13,7 +13,7 @@ class Date:
             self.year = int(yyyymmdd[0])
             self.month = int(yyyymmdd[1])
             self.day = int(yyyymmdd[2])
-        self.yyyymmdd = yyyymmdd
+        self.yyyymmdd = datetime.date(self.year, self.month, self.day).strftime('%Y%m%d')
 
     @classmethod
     def as_date(cls, yyyymmdd):
@@ -26,3 +26,7 @@ class Date:
     def __int__(self):
         return int(self.yyyymmdd)
 
+
+def parse_date(in_date):
+    datetime_obj = datetime.datetime.strptime(in_date, '%m/%d/%Y')
+    return Date.as_date(datetime_obj.strftime('%Y%m%d'))
