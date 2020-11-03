@@ -25,13 +25,13 @@ class Experiment(db.Model):
     experiment_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     experiment_dir = db.Column(db.String, nullable=False, unique=True)
     experiment_name = db.Column(db.String, nullable=False, unique=True)
-    participant_details = relationship("ParticipantDetail", backref="experiments")
 
     session_re = db.Column(db.String, nullable=True)
     folder_re = db.Column(db.String, nullable=True)
     trial_re = db.Column(db.String, nullable=True)
 
     sessions = relationship("Session", backref="experiments")
+    participants = relationship("ParticipantDetail", backref="experiments")
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
@@ -81,7 +81,7 @@ class Folder(db.Model):
     trial_frame_number_file = db.Column(db.String, nullable=False, unique=True)
 
     trials = relationship("Trial", backref="folders")
-    score_files = relationship("BlindFolder", backref="folders")
+    score_folders = relationship("BlindFolder", backref="folders")
 
 
 class BlindFolder(db.Model):
@@ -90,6 +90,8 @@ class BlindFolder(db.Model):
     folder_id = db.Column(UUID(as_uuid=True), db.ForeignKey('folders.folder_id'), nullable=False)
     reviewer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('reviewers.reviewer_id'), nullable=False)
     blind_name = db.Column(db.String, nullable=False, unique=True)
+
+    blind_trials = relationship("BlindTrial", backref="blind_folders")
 
 
 class Trial(db.Model):
@@ -101,6 +103,8 @@ class Trial(db.Model):
     trial_dir = db.Column(db.String, nullable=False, unique=True)
     trial_date = db.Column(db.Date, nullable=False)
     trial_num = db.Column(db.Integer, nullable=False)
+
+    scores = relationship("SRTrialScore", backref='trials')
 
 
 class BlindTrial(db.Model):
