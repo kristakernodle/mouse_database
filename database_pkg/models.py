@@ -93,6 +93,14 @@ class BlindFolder(db.Model):
 
     blind_trials = relationship("BlindTrial", backref="blind_folders")
 
+    def as_dict(self):
+        return {
+            'blind_folder_id': str(self.blind_folder_id),
+            'folder_id': str(self.folder_id),
+            'reviewer_id': str(self.reviewer_id),
+            'blind_name': self.blind_name
+        }
+
 
 class Trial(db.Model):
     __tablename__ = 'trials'
