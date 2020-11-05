@@ -41,6 +41,7 @@ def remove_duplicates(duplicates_df, new_dir):
         except shutil.Error:
             print(f'File could not be removed: {file_to_remove.scored_file_path}')
 
+            # TODO fix this -- it will not affect my data processing, but is important for paper submission
             removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
             return False, removed_duplicates_df, duplicates_df
 
@@ -50,7 +51,7 @@ def remove_duplicates(duplicates_df, new_dir):
 
         # Remove blind_folder entry from database AND duplicates_df
         blind_folder_to_remove.remove_from_db()
-        duplicates_df = duplicates_df.drop(0)
+        duplicates_df = duplicates_df.drop(duplicates_df.index[0])
 
     removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
     return True, removed_duplicates_df, duplicates_df
