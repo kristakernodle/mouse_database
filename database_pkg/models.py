@@ -101,6 +101,10 @@ class BlindFolder(db.Model):
             'blind_name': self.blind_name
         }
 
+    def remove_from_db(self):
+        db.session.delete(self)
+        db.session.commit()
+
 
 class Trial(db.Model):
     __tablename__ = 'trials'
@@ -123,6 +127,10 @@ class BlindTrial(db.Model):
     trial_id = db.Column(UUID(as_uuid=True), db.ForeignKey('trials.trial_id'), nullable=False)
     folder_id = db.Column(UUID(as_uuid=True), db.ForeignKey('folders.folder_id'), nullable=False)
     blind_trial_num = db.Column(db.Integer, nullable=False)
+
+    def remove_from_db(self):
+        db.session.delete(self)
+        db.session.commit()
 
 
 class SRTrialScore(db.Model):
