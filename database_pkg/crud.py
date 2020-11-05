@@ -409,13 +409,19 @@ def populate_trial_scores():
                     groom = True
                 else:
                     groom = False
-                db.session.add(
-                    SRTrialScore(trial_id=blind_trial.trial_id, reviewer_id=blind_trial.reviewer_id,
-                                 reach_score=int(scored_row['Score']), abnormal_movt_score=movt,
-                                 grooming_score=groom)
-                )
+
+                trial_score = SRTrialScore.query.filter(SRTrialScore.trial_id == blind_trial.trial_id).first()
+
+                if trial_score is None:
+                    db.session.add(SRTrialScore(trial_id=blind_trial.trial_id, reviewer_id=blind_trial.reviewer_id,
+                                                reach_score=int(scored_row['Score']), abnormal_movt_score=movt,
+                                                grooming_score=groom))
+                else:
+                    trial_score.reach_score = int(scored_row['Score'])
+                    trial_score.abnormal_movt_score = movt
+                    trial_score.grooming_score = groom
+
                 db.session.commit()
-                blind_trial = None
 
         else:
             print(f"Not Scored: {str(scored_blind_folder_path)}")
