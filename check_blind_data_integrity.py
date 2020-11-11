@@ -33,6 +33,7 @@ def remove_duplicates(duplicates_df, new_dir):
         file_to_remove = duplicates_df.iloc[0]
 
         blind_folder_to_remove = dbpkg.BlindFolder.query.get(file_to_remove.blind_folder_id)
+        removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
 
         try:
             shutil.move(file_to_remove.scored_file_path, new_dir)
@@ -42,7 +43,7 @@ def remove_duplicates(duplicates_df, new_dir):
             print(f'File could not be removed: {file_to_remove.scored_file_path}')
 
             # TODO fix this -- it will not affect my data processing, but is important for paper submission
-            removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
+
             return False, removed_duplicates_df, duplicates_df
 
         # Remove all associated blind_trial entries
