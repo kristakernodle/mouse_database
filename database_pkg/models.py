@@ -2,6 +2,7 @@ import database_pkg as dpk
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
+from pathlib import Path
 
 db = dpk.db
 
@@ -104,6 +105,13 @@ class BlindFolder(db.Model):
     def remove_from_db(self):
         db.session.delete(self)
         db.session.commit()
+
+    def add_blind_trials(self, scored_blind_folder_path=None):
+        if scored_blind_folder_path is None:
+            reviewer = Reviewer.query.filter(Reviewer.reviewer_id == self.reviewer_id).first()
+            scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
+                f"{self.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+        dpk.crud.add_blind_trials_from_scored_blind_folder()
 
 
 class Trial(db.Model):
