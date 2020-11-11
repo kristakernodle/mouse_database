@@ -2,6 +2,7 @@ import pandas as pd
 import json
 from pathlib import Path
 from math import isnan
+import shutil
 
 from database_pkg import db, Date, Mouse, Reviewer, Experiment, ParticipantDetail, Session, Folder, Trial, \
     BlindFolder, BlindTrial, app, SRTrialScore
@@ -400,6 +401,10 @@ def populate_trial_scores():
                 blind_trial = BlindTrial.query.filter(BlindTrial.blind_folder_id == blind_folder.blind_folder_id,
                                                       BlindTrial.blind_trial_num == int(scored_row['Trial'])).first()
 
+                if blind_trial is None:
+                    blind_folder.remove_from_db()
+                    shutil.move(str(scored_blind_folder_path), '/Users/Krista/Desktop/blindScoring/lost_keys/')
+
                 if scored_row['Movement'] == '1':
                     movt = True
                 else:
@@ -451,3 +456,12 @@ def rebuild_database(back_up_dir):
     populate_blind_folders_from_file(blind_folders_full_path)
     populate_blind_trials_from_file(blind_trials_full_path)
 
+
+def add_blind_trials_from_scored_blind_folder(path_scored_blind_folder):
+    # mouse_data_frame = pd.read_csv(path_scored_blind_folder,
+    #                                usecols=['Trial', 'S', 'birthdate', 'genotype', 'sex'],
+    #                                delimiter=',',
+    #                                dtype={'mouse_id': str, 'eartag': str, 'birthdate': str, 'genotype': str,
+    #                                       'sex': str},
+    #                                nrows=23)
+    pass
