@@ -53,7 +53,7 @@ for scored_trial in all_scored_trials:
          }
     )
 
-all_scored_trials_df = pd.DataFrame.from_records(all_scored_trials)
+all_scored_trials_df = pd.DataFrame.from_records(list_all_scored_trials)
 all_scored_trials_one_reviewer_df = all_scored_trials_df.drop_duplicates(subset=['trial_dir'], keep='first')
 
 KO_trial_count_abmov = all_scored_trials_one_reviewer_df[all_scored_trials_one_reviewer_df.genotype == 'Knock-Out'].sum()['abnormal_movt_score']

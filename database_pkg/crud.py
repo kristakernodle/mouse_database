@@ -175,16 +175,29 @@ def populate_blind_folders_from_file(full_path):
                                    )
     for index, blind_folder_row in blind_folders_df.iterrows():
         blind_folder = BlindFolder.query.get(blind_folder_row['blind_folder_id'])
+
+        if blind_folder is not None:
+            continue
+
+        blind_folder = BlindFolder.query.filter(BlindFolder.blind_name == blind_folder_row['blind_name']).first()
+
+        if blind_folder is not None:
+            continue
+
         folder = Folder.query.get(blind_folder_row['folder_id'])
         reviewer = Reviewer.query.get(blind_folder_row['reviewer_id'])
-        if folder is not None and reviewer is not None and blind_folder is None:
+        if folder is not None and reviewer is not None:
             db.session.add(
                 BlindFolder(blind_folder_id=blind_folder_row['blind_folder_id'],
-                            folder_id=blind_folder_row['folder_id'],
-                            reviewer_id=blind_folder_row['reviewer_id'], blind_name=blind_folder_row['blind_name']
+                        folder_id=blind_folder_row['folder_id'],
+                        reviewer_id=blind_folder_row['reviewer_id'], blind_name=blind_folder_row['blind_name']
                             )
             )
             db.session.commit()
+        else:
+            print(f'Inspect blind_folder_id: {blind_folder_row.blind_folder_id} \n'
+                  f'Inspect folder_id: {blind_folder_row.folder_id} \n'
+                  f'Inspect reviewer_id: {blind_folder_row.reviewer_id}.')
 
 
 def populate_blind_trials_from_file(full_path):
@@ -195,6 +208,10 @@ def populate_blind_trials_from_file(full_path):
                                   )
     for index, blind_trial_row in blind_trials_df.iterrows():
         blind_trial = BlindTrial.query.get(blind_trial_row['blind_trial_id'])
+
+        if blind_trial is not None:
+            continue
+
         trial = Trial.query.get(blind_trial_row['trial_id'])
         folder = Folder.query.get(blind_trial_row['folder_id'])
 
@@ -229,6 +246,8 @@ def populate_blind_trials_from_file(full_path):
                            trial_id=trial.trial_id, folder_id=folder.folder_id, blind_trial_num=blind_trial_num)
             )
             db.session.commit()
+        else:
+            print("Help")
 
 
 # def populate_trials(all_trials_dir, experiment, session, folder=None):
