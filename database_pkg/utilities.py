@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 
 class Date:
@@ -30,3 +31,21 @@ class Date:
 def parse_date(in_date):
     datetime_obj = datetime.datetime.strptime(in_date, '%m/%d/%Y')
     return Date.as_date(datetime_obj.strftime('%Y%m%d'))
+
+
+def check_if_sharedx_connected(sharedx_path='/Volumes/SharedX/Neuro-Leventhal/data'):
+    if not Path(sharedx_path).exists():
+        print(f"Connect SharedX to path: {sharedx_path} \n")
+    return Path(sharedx_path).exists()
+
+
+def exactly_one_true(in_list):
+    if sum(list(map(int, in_list))) == 1:
+        return True
+    return False
+
+
+def all_false(in_list):
+    if sum(list(map(int, in_list))) == 0:
+        return True
+    return False

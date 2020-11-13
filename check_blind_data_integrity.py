@@ -4,98 +4,134 @@ import os.path
 from pathlib import Path
 import datetime
 import shutil
+from random import choice
 
 
-def get_date_modified(full_path):
-    if not Path(full_path).exists():
+def get_date_modified(blind_folder):
+    reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
+    full_path = Path(reviewer.scored_dir).joinpath(
+        f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+    if not full_path.exists():
         print(f"File does not exist: {full_path}")
         return None
     time_modified = os.path.getmtime(full_path)
     return datetime.datetime.fromtimestamp(time_modified).date()
 
 
-def remove_duplicates(duplicates_df, new_dir):
-    removed_files = list()
-
-    reviewer = dbpkg.Reviewer.query.get(pd.unique(duplicates_df['reviewer_id']))
-
-    duplicates_df['scored_file_path'] = duplicates_df.apply(
-        lambda row: os.path.join(reviewer.scored_dir,
-                                 f"{row.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv"),
-        axis=1)
-
-    duplicates_df['date_last_modified'] = duplicates_df.apply(
-        lambda row: get_date_modified(row['scored_file_path']),
-        axis=1)
-
-    while len(duplicates_df) > 1:
-        duplicates_df.sort_values(['date_last_modified'], ascending=True, inplace=True)
-        file_to_remove = duplicates_df.iloc[0]
-
-        blind_folder_to_remove = dbpkg.BlindFolder.query.get(file_to_remove.blind_folder_id)
-        removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
-
-        try:
-            shutil.move(file_to_remove.scored_file_path, new_dir)
-            removed_files.append(file_to_remove)
-
-        except shutil.Error:
-            print(f'File could not be removed: {file_to_remove.scored_file_path}')
-
-            # TODO fix this -- it will not affect my data processing, but is important for paper submission
-
-            return False, removed_duplicates_df, duplicates_df
-
-        # Remove all associated blind_trial entries
-        for blind_trial in blind_folder_to_remove.blind_trials:
-            blind_trial.remove_from_db()
-
-        # Remove blind_folder entry from database AND duplicates_df
-        blind_folder_to_remove.remove_from_db()
-        duplicates_df = duplicates_df.drop(duplicates_df.index[0])
-
-    removed_duplicates_df = pd.concat(removed_files, axis=1, keys=[s.name for s in removed_files])
-    return True, removed_duplicates_df, duplicates_df
+def remove_blind_folder_and_associated_trials(blind_folder):
+    all_blind_trials = blind_folder.blind_trials
+    for blind_trial in all_blind_trials:
+        blind_trial.remove_from_db()
+    blind_folder.remove_from_db()
 
 
-new_dir = '/Volumes/SharedX/Neuro-Leventhal/data/mouseSkilledReaching/blindedScoring/scored_duplicates'
+if __name__ == '__main__':
+    scored_dup_dir = '/Volumes/SharedX/Neuro-Leventhal/data/mouseSkilledReaching/blindedScoring/scored_duplicates'
+    lost_keys_dir = '/Users/Krista/Desktop/lost_keys'
 
-all_removed_files = list()
-all_saved_files = list()
+    all_duplicates_for_removal = list()
+    all_duplicates_to_keep = list()
 
-all_blind_folders_df = pd.DataFrame.from_records(
-    [blind_folder_obj.as_dict() for blind_folder_obj in dbpkg.BlindFolder.query.all()])
+    all_blind_folders_df = pd.DataFrame.from_records(
+        [blind_folder_obj.as_dict() for blind_folder_obj in dbpkg.BlindFolder.query.all()])
 
-duplicate_folders = all_blind_folders_df[all_blind_folders_df.duplicated(subset=['folder_id'])]
-duplicate_folders_reviewer = duplicate_folders[duplicate_folders.duplicated(subset=['folder_id', 'reviewer_id'])]
+    duplicate_folder_reviewer = all_blind_folders_df[all_blind_folders_df.duplicated(subset=['folder_id', 'reviewer_id'])][['folder_id', 'reviewer_id']]
 
-for index, duplicate in duplicate_folders_reviewer.iterrows():
-    all_duplicates = [bf_obj.as_dict() for bf_obj in
-                      dbpkg.BlindFolder.query.filter(dbpkg.BlindFolder.folder_id == duplicate['folder_id']).all()]
-    all_duplicates_df = pd.DataFrame.from_records(all_duplicates)
+    if len(duplicate_folder_reviewer) == 0:
+        print("No duplicates found.")
+        exit()
 
-    num_reviewers = len(pd.unique(all_duplicates_df['reviewer_id']))
-    if num_reviewers == 1:
-        ret, removed_files_df, still_present_files_df = remove_duplicates(all_duplicates_df, new_dir)
-    else:
-        duplicates_same_reviewer = all_duplicates_df.groupby('reviewer_id').filter(lambda x: len(x) > 1)
+    for index, duplicate_pair in duplicate_folder_reviewer.iterrows():
+        all_duplicates_for_pair = dbpkg.BlindFolder.query.filter(
+            dbpkg.BlindFolder.folder_id == duplicate_pair.folder_id,
+            dbpkg.BlindFolder.reviewer_id == duplicate_pair.reviewer_id).all()
 
-        if len(duplicates_same_reviewer.drop_duplicates(subset='reviewer_id')) == 1:
-            ret, removed_files_df, still_present_files_df = remove_duplicates(duplicates_same_reviewer, new_dir)
+        # Check to see if any are already scored vs not already scored
+        scored_list = [blind_folder.is_scored() for blind_folder in all_duplicates_for_pair]
+        if len(scored_list) < 2:
+            pass
+
+        if all(scored_list):
+
+            # If all are already scored, choose the one modified most recently
+            all_duplicates_for_pair_date_modified_list_dicts = []
+            for blind_folder in all_duplicates_for_pair:
+                blind_folder_dict = blind_folder.as_dict()
+                blind_folder_dict.update({'date_modified': get_date_modified(blind_folder)})
+                all_duplicates_for_pair_date_modified_list_dicts.append(blind_folder_dict)
+            all_duplicates_for_pair_date_modified_list_dicts.sort(key=lambda i: i['date_modified'])
+            # @note: Sorts by ascending date modified
+
+            all_duplicates_for_removal.append(all_duplicates_for_pair_date_modified_list_dicts[:-1])
+            all_duplicates_to_keep.append(all_duplicates_for_pair_date_modified_list_dicts[-1])
+
+        elif dbpkg.utilities.exactly_one_true(scored_list):
+            # If only one is scored, removed the unscored blind folders
+            for blind_folder in all_duplicates_for_pair:
+                if blind_folder.is_scored():
+                    continue
+
+                # Check if folder has been created in reviewer's toScore folder:
+                reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
+                blind_folder_to_score_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+                if not blind_folder_to_score_path.exists():
+                    # If not: remove all blind_trials and blind_folder from database
+                    remove_blind_folder_and_associated_trials(blind_folder)
+                else:
+                    # If so: remove the blind_folder from the toScore directory
+                    try:
+                        shutil.rmtree(str(blind_folder_to_score_path))
+                        remove_blind_folder_and_associated_trials(blind_folder)
+                    except shutil.Error:
+                        pass
+
+        elif dbpkg.utilities.all_false(scored_list):
+            # @note: I have had no use of this case, so I put code in for what I would do, but I have not tested it
+            print('No blind_folders scored! This case has not been tested')
+            continue
+            # paths_exist = list()
+            # for blind_folder in all_duplicates_for_pair:
+            #     # Check if folder has been created in reviewer's toScore folder:
+            #     reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
+            #     blind_folder_to_score_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+            #     paths_exist.append(blind_folder_to_score_path.exists())
+            # if all(paths_exist):
+            #     for blind_folder in all_duplicates_for_pair[:-1]:
+            #         reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
+            #         blind_folder_to_score_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+            #         try:
+            #             shutil.rmtree(str(blind_folder_to_score_path))
+            #             remove_blind_folder_and_associated_trials(blind_folder)
+            #         except shutil.Error:
+            #             pass
+
         else:
-            print('Multiple reviewers with duplicate folders in the blind folders table')
-            break
+            # Have no needed this case; did not write anything useful
+            print('More than one but not all blind_folders scored! This case has not been tested')
+            continue
 
-    if not ret:
-        break
+    blind_folders_no_trials = 0
+    blind_folders_with_trials = 0
+    for blind_folder_dict in all_duplicates_to_keep:
+        blind_folder = dbpkg.BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
+        folder = dbpkg.Folder.query.get(blind_folder_dict['folder_id'])
+        if len(folder.trials) != len(blind_folder.blind_trials):
+            reviewer = dbpkg.Reviewer.query.get(blind_folder_dict['reviewer_id'])
+            blind_folder_scored_path = Path(reviewer.scored_dir).joinpath(f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+            try:
+                shutil.move(str(blind_folder_scored_path), lost_keys_dir)
+                remove_blind_folder_and_associated_trials(blind_folder)
+            except shutil.Error:
+                continue
 
-    all_removed_files.append(removed_files_df)
-    all_saved_files.append(still_present_files_df)
-
-all_removed_files_df = pd.concat(all_removed_files)
-all_saved_files_df = pd.concat(all_saved_files)
-
-all_removed_files_df.to_csv(os.path.join(new_dir, 'all_removed_files.csv'), sep=',', header=True, index=False, mode='w',
-                            date_format='%m/%d/%Y')
-all_saved_files_df.to_csv(os.path.join(new_dir, 'all_saved_files.csv'), sep=',', header=True, index=False, mode='w',
-                          date_format='%m/%d/%Y')
+    for blind_folder_list in all_duplicates_for_removal:
+        for blind_folder_dict in blind_folder_list:
+            blind_folder = dbpkg.BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
+            reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
+            blind_folder_scored_path = Path(reviewer.scored_dir).joinpath(
+                f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+            try:
+                shutil.move(str(blind_folder_scored_path), scored_dup_dir)
+                remove_blind_folder_and_associated_trials(blind_folder)
+            except shutil.Error:
+                continue
