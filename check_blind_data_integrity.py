@@ -19,6 +19,7 @@ def get_date_modified(blind_folder):
 
 
 def remove_blind_folder_and_associated_trials(blind_folder):
+    # TODO: Save all of this information in case I need it later
     all_blind_trials = blind_folder.blind_trials
     for blind_trial in all_blind_trials:
         blind_trial.remove_from_db()
