@@ -112,7 +112,7 @@ class BlindFolder(db.Model):
             reviewer = Reviewer.query.filter(Reviewer.reviewer_id == self.reviewer_id).first()
             scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
                 f"{self.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
-        dpk.crud.add_blind_trials_from_scored_blind_folder(scored_blind_folder_path)
+        database_pkg.CRUD.crud.add_blind_trials_from_scored_blind_folder(scored_blind_folder_path)
 
     def is_scored(self):
         if not check_if_sharedx_connected:
