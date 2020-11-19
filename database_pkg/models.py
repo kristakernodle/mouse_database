@@ -53,8 +53,13 @@ class Experiment(Base):
     folder_re = db.Column(db.String, nullable=True)
     trial_re = db.Column(db.String, nullable=True)
 
-    sessions = relationship("Session", backref="experiments")
     participants = relationship("ParticipantDetail", backref="experiments")
+    sessions = relationship("Session", backref="experiments")
+    folders = relationship("Folder",
+                           secondary="join(Session, Folder, Session.session_id == Folder.session_id)",
+                           primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                                       "Session.session_id==Folder.session_id)",
+                           secondaryjoin="Session.session_id == Folder.session_id")
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
