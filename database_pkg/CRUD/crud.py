@@ -81,7 +81,7 @@ def rebuild_database(back_up_dir):
 
     reinstate_mouse(mouse_full_path)
     reinstate_experiments(experiments_full_path)
-    populate_participant_details_from_file(participant_details_full_path)
+    reinstate_participant_details(participant_details_full_path)
     reinstate_reviewers(reviewers_full_path)
     reinstate_sessions(sessions_full_path)
     reinstate_folders(folders_full_path)
