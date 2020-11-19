@@ -5,6 +5,7 @@ import sqlalchemy
 import uuid
 from pathlib import Path
 from database_pkg.utilities import check_if_sharedx_connected
+import pandas as pd
 
 db = dpk.db
 
@@ -65,6 +66,12 @@ class Experiment(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+    def sessions_df(self):
+        return pd.DataFrame.from_records([session.as_dict() for session in self.sessions])
+
+    def participants_df(self):
+        return pd.DataFrame.from_records([participant.as_dict() for participant in self.participants])
 
 
 class Reviewer(Base):
