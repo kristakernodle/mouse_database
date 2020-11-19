@@ -49,3 +49,11 @@ def all_false(in_list):
     if sum(list(map(int, in_list))) == 0:
         return True
     return False
+
+
+def get_original_video_and_frame_number_file(experiment, session, folder_dir):
+    folder_num = folder_dir.name.strip(experiment.folder_re.strip("*"))
+    original_video_stem = '_'.join(Path(session.session_dir).name.strip('et').split('_')[:-1])
+    original_video = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.MP4")
+    trial_frame_number_file = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.csv")
+    return original_video, trial_frame_number_file

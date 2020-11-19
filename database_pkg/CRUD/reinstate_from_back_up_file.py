@@ -1,11 +1,10 @@
 import json
-from pathlib import Path
 
 import pandas as pd
 
 from database_pkg import db, Mouse, Experiment, ParticipantDetail, Reviewer, Session, Folder, Trial, BlindFolder, \
     BlindTrial
-from database_pkg.utilities import parse_date, Date
+from database_pkg.utilities import parse_date, Date, get_original_video_and_frame_number_file
 
 
 def reinstate_mouse(full_path):
@@ -127,11 +126,11 @@ def reinstate_folders(full_path):
     for index, folder_row in folders_data_frame.iterrows():
         session = Session.query.get(folder_row['session_id'])
         folder = Folder.query.get(folder_row['folder_id'])
+        experiment = Experiment.query.get(session.experiment_id)
         if session is not None and folder is None:
-            folder_num = folder_row['folder_dir'].split('Reaches')[-1]
-            original_video_stem = '_'.join(Path(session.session_dir).name.strip('et').split('_')[:-1])
-            original_video = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.MP4")
-            trial_frame_number_file = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.csv")
+            original_video, trial_frame_number_file = get_original_video_and_frame_number_file(experiment,
+                                                                                               session,
+                                                                                               folder_row['folder_dir'])
             db.session.add(
                 Folder(folder_id=folder_row['folder_id'], session_id=folder_row['session_id'],
                        folder_dir=folder_row['folder_dir'],

@@ -4,15 +4,14 @@ from pathlib import Path
 import pandas as pd
 
 from database_pkg import db, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
+from database_pkg.utilities import get_original_video_and_frame_number_file
 
 
 def update_sessions(experiment):
     if not Path(experiment.experiment_dir).exists():
         print(f'Experiment directory does not exist: {experiment.experiment_dir}')
 
-    participants_list = experiment.participants
-
-    for participant in participants_list:
+    for participant in experiment.participants:
         sessions_search_dir = Path(participant.participant_dir).joinpath()
         if len(experiment.session_re.split('/')) > 1:
             for item in experiment.session_re.split('/')[:-1]:
@@ -44,10 +43,10 @@ def update_folders(experiment):
         for folder_dir in all_folders:
             folder = Folder.query.filter_by(folder_dir=str(folder_dir)).first()
             if folder is None:
-                folder_num = folder_dir.name.strip(experiment.folder_re.strip("*"))
-                original_video_stem = '_'.join(Path(session.session_dir).name.strip('et').split('_')[:-1])
-                original_video = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.MP4")
-                trial_frame_number_file = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.csv")
+
+                original_video, trial_frame_number_file = get_original_video_and_frame_number_file(experiment,
+                                                                                                   session,
+                                                                                                   folder_dir)
                 db.session.add(
                     Folder(session_id=session.session_id,
                            folder_dir=str(folder_dir),
@@ -86,11 +85,9 @@ def update_trials(experiment):
                     db.session.commit()
 
 
-def update_trial_scores():
-    all_folders = Folder.query.all()
-    for folder in all_folders:
-        all_blind_folders = folder.score_folders
-        for blind_folder in all_blind_folders:
+def update_trial_scores(experiment):
+    for folder in experiment.folders:
+        for blind_folder in folder.score_folders:
             reviewer = Reviewer.query.get(blind_folder.reviewer_id)
             scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
                 f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
