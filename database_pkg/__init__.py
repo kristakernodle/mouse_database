@@ -12,4 +12,4 @@ db = SQLAlchemy(app)
 from .utilities import Date
 from .models import Mouse, Reviewer, Experiment, ParticipantDetail, Session, Folder, Trial, BlindFolder, BlindTrial, \
     SRTrialScore
-import database_pkg.crud as crud
+import database_pkg.CRUD as crud
