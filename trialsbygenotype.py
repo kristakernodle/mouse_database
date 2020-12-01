@@ -12,8 +12,7 @@ CT_trials_with_AM = 0
 
 experiment = dbpkg.Experiment.query.filter(dbpkg.Experiment.experiment_name == 'skilled-reaching').first()
 
-all_folders = dbpkg.Folder.query.all()
-for folder in all_folders:
+for folder in experiment.folders:
     all_blind_folders = folder.score_folders
 
     if len(all_blind_folders) == 0:
@@ -125,13 +124,19 @@ reach_scores_by_eartag_by_session_df = pd.DataFrame.from_records(reach_scores_by
 
 reach_scores_by_eartag_by_session_df.insert(17, "Total Trials",
                                             reach_scores_by_eartag_by_session_df.iloc[:, 7:].sum(axis=1))
-reach_scores_by_eartag_by_session_df.insert(18, "First Success",
+reach_scores_by_eartag_by_session_df.insert(18, "Viable Trials",
+                                            reach_scores_by_eartag_by_session_df.iloc[:, 8:13].sum(axis=1))
+
+reach_scores_by_eartag_by_session_df.insert(19, "First Success",
                                             reach_scores_by_eartag_by_session_df['1'] *
-                                            100 / reach_scores_by_eartag_by_session_df['Total Trials'])
-reach_scores_by_eartag_by_session_df.insert(19, "Any Success",
+                                            100 / reach_scores_by_eartag_by_session_df['Viable Trials'])
+reach_scores_by_eartag_by_session_df['First Success'] = reach_scores_by_eartag_by_session_df['First Success'].fillna(0)
+
+reach_scores_by_eartag_by_session_df.insert(20, "Any Success",
                                             (reach_scores_by_eartag_by_session_df['1'] +
                                              reach_scores_by_eartag_by_session_df['2']) * 100 /
-                                            reach_scores_by_eartag_by_session_df['Total Trials'])
+                                            reach_scores_by_eartag_by_session_df['Viable Trials'])
+reach_scores_by_eartag_by_session_df['Any Success'] = reach_scores_by_eartag_by_session_df['Any Success'].fillna(0)
 
 
 KO_trials_with_abmov = all_scored_trials_df[(all_scored_trials_df['genotype'] == 'Knock-Out') &
@@ -189,10 +194,11 @@ for session_num in range(1, 22):
 proportions_by_day_df = pd.DataFrame.from_records(list_proportions_by_day)
 proportions_by_day_df['Percent Trials with Abnormal Movement'] = proportions_by_day_df['Proportion Trials with Abnormal Movements']*100
 
+palette = {"Control": 'b', "Knock-Out": 'r'}
 g, ax2 = plt.subplots()
 seaborn.set_theme(context='poster', style="whitegrid", font_scale=1.25)
 seaborn.set(font_scale=1.25)
-seaborn.scatterplot(x="Session Number", y='Percent Trials with Abnormal Movement', hue='Genotype',
+seaborn.scatterplot(x="Session Number", y='Percent Trials with Abnormal Movement', hue='Genotype', palette=palette,
                     data=proportions_by_day_df)
 ax2.set_title("Trials with Abnormal Movements by Session and Genotype")
 # ax2.set(ylim=(0, 10))
@@ -205,27 +211,31 @@ plt.savefig('/Users/Krista/Desktop/percent_abnormal_movement_by_day_scatterplot.
 h, ax3 = plt.subplots()
 seaborn.set_theme(context='poster', style="whitegrid", font_scale=1.25)
 seaborn.set(font_scale=1.25)
-seaborn.boxplot(x="session_num", y="First Success", hue='genotype',
-                    data=reach_scores_by_eartag_by_session_df)
+seaborn.boxplot(x="session_num", y="First Success", hue='genotype', palette=palette,
+                data=reach_scores_by_eartag_by_session_df)
 ax3.set_title("Single Pellet Skilled-Reaching First Success Rate by Genotype")
 ax3.set(xlabel="Training Day", ylabel='Percent Success')
 plt.legend(title='Genotype')
-# ax2.set(ylim=(0, 10))
-# handles, labels = ax2.get_legend_handles_labels()
-# ax2.legend(handles[0:2], ('Control', 'Knock-Out'))
+handles, labels = ax3.get_legend_handles_labels()
+handles_labels = list(zip(handles, labels))
+handles_labels = sorted(handles_labels, key=lambda group: group[1])
+unzipped_handles_labels = list(zip(*handles_labels))
+ax3.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
 plt.subplots_adjust(bottom=0.15)
-plt.savefig('/Users/Krista/Desktop/first_success_rate_boxplot.pdf')
+plt.savefig('/Users/Krista/Desktop/figures/first_success_rate_boxplot.pdf')
 
 j, ax4 = plt.subplots()
 seaborn.set_theme(context='poster', style="whitegrid", font_scale=1.25)
 seaborn.set(font_scale=1.25)
-seaborn.boxplot(x="session_num", y="Any Success", hue='genotype',
-                    data=reach_scores_by_eartag_by_session_df)
+seaborn.boxplot(x="session_num", y="Any Success", hue='genotype', palette=palette,
+                data=reach_scores_by_eartag_by_session_df)
 ax4.set_title("Single Pellet Skilled-Reaching Any Success Rate by Genotype")
 ax4.set(xlabel="Training Day", ylabel='Percent Success')
 plt.legend(title='Genotype')
-# ax2.set(ylim=(0, 10))
-# handles, labels = ax2.get_legend_handles_labels()
-# ax2.legend(handles[0:2], ('Control', 'Knock-Out'))
+handles, labels = ax4.get_legend_handles_labels()
+handles_labels = list(zip(handles, labels))
+handles_labels = sorted(handles_labels, key=lambda group: group[1])
+unzipped_handles_labels = list(zip(*handles_labels))
+ax4.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
 plt.subplots_adjust(bottom=0.15)
-plt.savefig('/Users/Krista/Desktop/any_success_rate_boxplot.pdf')
+plt.savefig('/Users/Krista/Desktop/figures/any_success_rate_boxplot.pdf')
