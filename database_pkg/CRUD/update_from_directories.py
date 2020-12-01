@@ -2,9 +2,11 @@ from math import isnan
 from pathlib import Path
 
 import pandas as pd
+from pandas.io.parsers import ParserError
 
 from database_pkg import db, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
 from database_pkg.utilities import get_original_video_and_frame_number_file
+import shutil
 
 
 def update_sessions(experiment):
@@ -43,7 +45,6 @@ def update_folders(experiment):
         for folder_dir in all_folders:
             folder = Folder.query.filter_by(folder_dir=str(folder_dir)).first()
             if folder is None:
-
                 original_video, trial_frame_number_file = get_original_video_and_frame_number_file(experiment,
                                                                                                    session,
                                                                                                    folder_dir)
@@ -93,12 +94,17 @@ def update_trial_scores(experiment):
                 f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
 
             if scored_blind_folder_path.exists():
-                all_blind_folder_scores = pd.read_csv(
-                    scored_blind_folder_path,
-                    usecols=['Trial', 'Score', 'Movement', 'Grooming'],
-                    delimiter=',',
-                    dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming': str}
-                )
+                try:
+                    all_blind_folder_scores = pd.read_csv(
+                        scored_blind_folder_path,
+                        usecols=['Trial', 'Score', 'Movement', 'Grooming'],
+                        delimiter=',',
+                        dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                    )
+                except ParserError:
+                    print(f"Reformat file {scored_blind_folder_path}")
+                    shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
+                    continue
 
                 for index, scored_row in all_blind_folder_scores.iterrows():
                     if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
@@ -109,8 +115,16 @@ def update_trial_scores(experiment):
                         BlindTrial.blind_trial_num == int(scored_row['Trial'])).first()
 
                     if blind_trial is None:
-                        print('Check data integrity.')
-                        break
+                        blind_trial_num = int(scored_row['Trial'])
+                        trial = Trial.query.filter_by(folder_id=folder.folder_id, trial_num=blind_trial_num).first()
+                        if trial is None:
+                            print('Trial is none?')
+                            continue
+                        blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                                 reviewer_id=reviewer.reviewer_id, trial_id=trial.trial_id,
+                                                 folder_id=folder.folder_id, blind_trial_num=blind_trial_num)
+                        db.session.add(blind_trial)
+                        db.session.commit()
 
                     if scored_row['Movement'] == '1':
                         movt = True
