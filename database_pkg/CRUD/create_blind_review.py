@@ -91,19 +91,23 @@ if __name__ == '__main__':
         reviewer = Reviewer.query.get(blind_folder.reviewer_id)
         toScore_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
 
+        if reviewer.first_name == 'Krista':
+            continue
+
         if not toScore_path.exists():
             os.mkdir(toScore_path)
             for blind_trial in blind_folder.blind_trials:
                 trial = Trial.query.get(blind_trial.trial_id)
                 blind_trial_dir = str(
                     toScore_path.joinpath(
-                        f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}.{Path(trial.trial_dir).stem}"))
+                        f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}{Path(trial.trial_dir).suffix}"))
                 try:
-                    shutil.copy(trial.trial_dir, blind_trial_dir)
-                except Error:
-                    print(f"shutil.copy Error: {Error}\n"
-                          f"Trial Directory: {trial.trial_dir}\n"
-                          f"BlindTrial Directory: {blind_trial_dir}\n")
+                    shutil.copyfile(trial.trial_dir, blind_trial_dir)
+                except (Error, PermissionError) as err:
+                    # print(f"shutil.copy Error: {err}\n"
+                    #       f"Trial Directory: {trial.trial_dir}\n"
+                    #       f"BlindTrial Directory: {blind_trial_dir}\n")
+                    continue
 
     # # Create Blind Folders
     # folders_to_blind = random.sample(all_folders_not_blinded, num_files)
