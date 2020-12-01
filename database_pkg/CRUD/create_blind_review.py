@@ -68,12 +68,12 @@ if __name__ == '__main__':
             all_folders_not_blinded.append(folder)
             continue
 
-        if not any([blind_folder.is_scored for blind_folder in folder.score_folders]):
+        if not any([blind_folder.is_scored() for blind_folder in folder.score_folders]):
             all_folders_no_scores.append(folder)
             continue
 
         for blind_folder in folder.score_folders:
-            if blind_folder.is_scored:
+            if blind_folder.is_scored():
                 continue
             else:
                 all_blind_folders_not_scored.append(blind_folder)
@@ -83,12 +83,33 @@ if __name__ == '__main__':
           f"Number of Folders With Blind Folders But No Blind Scores: {len(all_folders_no_scores)}")
 
     # Make sure all blind folders without scores have files in appropriate toScore directories
+    for blind_folder in experiment.blind_folders():
+        if blind_folder.is_scored():
+            continue
 
-    # Create Blind Folders
-    folders_to_blind = random.sample(all_folders_not_blinded, num_files)
-    print("Beginning to mask")
-    for folder in folders_to_blind:
-        blind_folder = folder.create_blind_folder()
+        folder = Folder.query.get(blind_folder.folder_id)
+        reviewer = Reviewer.query.get(blind_folder.reviewer_id)
+        toScore_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
 
-        blind_folder_dir = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
-        blind_folder_dir.mkdir()
+        if not toScore_path.exists():
+            os.mkdir(toScore_path)
+            for blind_trial in blind_folder.blind_trials:
+                trial = Trial.query.get(blind_trial.trial_id)
+                blind_trial_dir = str(
+                    toScore_path.joinpath(
+                        f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}.{Path(trial.trial_dir).stem}"))
+                try:
+                    shutil.copy(trial.trial_dir, blind_trial_dir)
+                except Error:
+                    print(f"shutil.copy Error: {Error}\n"
+                          f"Trial Directory: {trial.trial_dir}\n"
+                          f"BlindTrial Directory: {blind_trial_dir}\n")
+
+    # # Create Blind Folders
+    # folders_to_blind = random.sample(all_folders_not_blinded, num_files)
+    # print("Beginning to mask")
+    # for folder in folders_to_blind:
+    #     blind_folder = folder.create_blind_folder()
+    #
+    #     blind_folder_dir = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+    #     blind_folder_dir.mkdir()
