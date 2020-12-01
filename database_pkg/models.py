@@ -136,7 +136,7 @@ class ParticipantDetail(Base):
 class Session(Base):
     __tablename__ = 'sessions'
     __table_args__ = (
-        db.UniqueConstraint('experiment_id', 'session_dir')
+        db.UniqueConstraint('experiment_id', 'session_dir'),
     )
     session_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     mouse_id = db.Column(UUID(as_uuid=True), db.ForeignKey('mice.mouse_id'), nullable=False)

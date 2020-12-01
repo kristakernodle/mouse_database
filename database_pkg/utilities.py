@@ -31,7 +31,10 @@ class Date:
 
 
 def parse_date(in_date):
-    datetime_obj = datetime.datetime.strptime(in_date, '%m/%d/%Y')
+    try:
+        datetime_obj = datetime.datetime.strptime(in_date, '%m/%d/%Y')
+    except ValueError:
+        datetime_obj = datetime.datetime.strptime(in_date, '%Y-%m-%d')
     return Date.as_date(datetime_obj.strftime('%Y%m%d'))
 
 
@@ -54,6 +57,7 @@ def all_false(in_list):
 
 
 def get_original_video_and_frame_number_file(experiment, session, folder_dir):
+    folder_dir = Path(folder_dir)
     folder_num = folder_dir.name.strip(experiment.folder_re.strip("*"))
     original_video_stem = '_'.join(Path(session.session_dir).name.strip('et').split('_')[:-1])
     original_video = Path(session.session_dir).joinpath(f"{original_video_stem}_{folder_num}.MP4")

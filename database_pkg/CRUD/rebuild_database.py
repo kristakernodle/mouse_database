@@ -3,14 +3,14 @@ from pathlib import Path
 from database_pkg import db, app
 from .reinstate_from_back_up_file import reinstate_mouse, reinstate_experiments, reinstate_participant_details, \
     reinstate_reviewers, reinstate_sessions, reinstate_folders, reinstate_trials, reinstate_blind_folders, \
-    reinstate_blind_trials
+    reinstate_blind_trials, reinstate_sr_trial_scores
 
 
 def rebuild_database(back_up_dir):
     db.drop_all(app=app)
     db.create_all(app=app)
 
-    mouse_full_path = Path(back_up_dir).joinpath('mouse.csv')
+    mouse_full_path = Path(back_up_dir).joinpath('mice.csv')
     experiments_full_path = Path(back_up_dir).joinpath('experiments.csv')
     participant_details_full_path = Path(back_up_dir).joinpath('participant_details.csv')
     reviewers_full_path = Path(back_up_dir).joinpath('reviewers.csv')
@@ -19,6 +19,7 @@ def rebuild_database(back_up_dir):
     trials_full_path = Path(back_up_dir).joinpath('trials.csv')
     blind_folders_full_path = Path(back_up_dir).joinpath('blind_folders.csv')
     blind_trials_full_path = Path(back_up_dir).joinpath('blind_trials.csv')
+    sr_trial_scores_full_path = Path(back_up_dir).joinpath('sr_trial_scores.csv')
 
     reinstate_mouse(mouse_full_path)
     reinstate_experiments(experiments_full_path)
@@ -29,3 +30,4 @@ def rebuild_database(back_up_dir):
     reinstate_trials(trials_full_path)
     reinstate_blind_folders(blind_folders_full_path)
     reinstate_blind_trials(blind_trials_full_path)
+    reinstate_sr_trial_scores(sr_trial_scores_full_path)
