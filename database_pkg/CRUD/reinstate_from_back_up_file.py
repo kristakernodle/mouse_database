@@ -1,10 +1,11 @@
 import json
 
 import pandas as pd
+from sqlalchemy.exc import IntegrityError
 
-from database_pkg import db, Mouse, Experiment, ParticipantDetail, Reviewer, Session, Folder, Trial, BlindFolder, \
-    BlindTrial, SRTrialScore
-from database_pkg.utilities import parse_date, Date, get_original_video_and_frame_number_file
+from database_pkg import Mouse, Experiment, ParticipantDetail, Reviewer, Session, Folder, Trial, BlindFolder, \
+    BlindTrial, SRTrialScore, db
+from database_pkg.utilities import parse_date, Date
 
 
 def reinstate_mouse(full_path):
@@ -191,3 +192,5 @@ def reinstate_sr_trial_scores(full_path):
                          reach_score=sr_trial_score_row['reach_score'],
                          abnormal_movt_score=sr_trial_score_row['abnormal_movt_score'],
                          grooming_score=sr_trial_score_row['grooming_score']).add_to_db()
+
+

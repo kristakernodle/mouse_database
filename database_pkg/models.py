@@ -1,6 +1,7 @@
 import database_pkg as dpk
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.exc import IntegrityError
 import sqlalchemy
 import uuid
 from pathlib import Path
@@ -15,14 +16,20 @@ class Base(db.Model):
 
     def add_to_db(self, my_object):
         db.session.add(my_object)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
 
     def as_dict(self, my_object):
         return {key: value for key, value in sqlalchemy.inspect(my_object).dict.items() if '_sa_' not in key}
 
     def remove_from_db(self, my_object):
         db.session.delete(my_object)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
 
 
 class Mouse(Base):
@@ -87,6 +94,12 @@ class Experiment(Base):
 
     def participants_df(self):
         return pd.DataFrame.from_records([participant.as_dict() for participant in self.participants])
+
+    def blind_folders(self):
+        all_blind_folders = list()
+        for folder in self.folders:
+            all_blind_folders.extend(folder.score_folders)
+        return all_blind_folders
 
 
 class Reviewer(Base):
@@ -199,6 +212,9 @@ class Folder(Base):
 
 class BlindFolder(Base):
     __tablename__ = 'blind_folders'
+    __table_args__ = (
+        db.UniqueConstraint('folder_id', 'reviewer_id'),
+    )
     blind_folder_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     folder_id = db.Column(UUID(as_uuid=True), db.ForeignKey('folders.folder_id'), nullable=False)
     reviewer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('reviewers.reviewer_id'), nullable=False)
@@ -285,6 +301,9 @@ class BlindTrial(Base):
 
 class SRTrialScore(Base):
     __tablename__ = 'sr_trial_scores'
+    __table_args__ = (
+        db.UniqueConstraint('trial_id', 'reviewer_id'),
+    )
     trial_score_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     trial_id = db.Column(UUID(as_uuid=True), db.ForeignKey('trials.trial_id'), nullable=False, unique=False)
     reviewer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('reviewers.reviewer_id'), nullable=False, unique=False)
