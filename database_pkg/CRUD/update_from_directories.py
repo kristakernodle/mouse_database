@@ -108,11 +108,12 @@ def update_trial_scores(experiment):
                         if trial is None:
                             print('Trial is none?')
                             continue
-                        BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
-                                   reviewer_id=reviewer.reviewer_id,
-                                   trial_id=trial.trial_id,
-                                   folder_id=folder.folder_id,
-                                   blind_trial_num=blind_trial_num).add_to_db()
+                        blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                                 reviewer_id=reviewer.reviewer_id,
+                                                 trial_id=trial.trial_id,
+                                                 folder_id=folder.folder_id,
+                                                 blind_trial_num=blind_trial_num)
+                        blind_trial.add_to_db()
 
                     if scored_row['Movement'] == '1':
                         movt = True
