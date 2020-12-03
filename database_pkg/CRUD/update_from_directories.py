@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from database_pkg import db, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
+from database_pkg import Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
@@ -27,15 +27,11 @@ def update_sessions(experiment):
             if session is None:
                 session_name = Path(session_dir).name
                 et_eartag, session_date, calibration_num, t_session_num = session_name.split('_')
-
-                db.session.add(
-                    Session(mouse_id=participant.mouse_id,
-                            experiment_id=experiment.experiment_id,
-                            session_date=Date.as_date(session_date),
-                            session_dir=session_dir,
-                            session_num=int(t_session_num.strip('T-MISNGDA')))
-                )
-                db.session.commit()
+                Session(mouse_id=participant.mouse_id,
+                        experiment_id=experiment.experiment_id,
+                        session_date=Date.as_date(session_date),
+                        session_dir=session_dir,
+                        session_num=int(t_session_num.strip('T-MISNGDA'))).add_to_db()
 
 
 def update_folders(experiment):
@@ -48,13 +44,10 @@ def update_folders(experiment):
                 original_video, trial_frame_number_file = get_original_video_and_frame_number_file(experiment,
                                                                                                    session,
                                                                                                    folder_dir)
-                db.session.add(
-                    Folder(session_id=session.session_id,
-                           folder_dir=str(folder_dir),
-                           original_video=str(original_video),
-                           trial_frame_number_file=str(trial_frame_number_file))
-                )
-                db.session.commit()
+                Folder(session_id=session.session_id,
+                       folder_dir=str(folder_dir),
+                       original_video=str(original_video),
+                       trial_frame_number_file=str(trial_frame_number_file)).add_to_db()
 
 
 def update_trials(experiment):
@@ -74,16 +67,12 @@ def update_trials(experiment):
                 if trial is None:
                     trial_name = trial_dir.stem
                     trial_num = trial_name.split('_')[-1].strip('RTG')
-
-                    db.session.add(
-                        Trial(experiment_id=experiment.experiment_id,
-                              session_id=session.session_id,
-                              folder_id=folder.folder_id,
-                              trial_dir=str(trial_dir),
-                              trial_date=session.session_date,
-                              trial_num=int(trial_num[1:]))
-                    )
-                    db.session.commit()
+                    Trial(experiment_id=experiment.experiment_id,
+                          session_id=session.session_id,
+                          folder_id=folder.folder_id,
+                          trial_dir=str(trial_dir),
+                          trial_date=session.session_date,
+                          trial_num=int(trial_num[1:])).add_to_db()
 
 
 def update_trial_scores(experiment):
@@ -110,9 +99,8 @@ def update_trial_scores(experiment):
                     if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
                         continue
 
-                    blind_trial = BlindTrial.query.filter(
-                        BlindTrial.blind_folder_id == blind_folder.blind_folder_id,
-                        BlindTrial.blind_trial_num == int(scored_row['Trial'])).first()
+                    blind_trial = BlindTrial.query.filter_by(blind_folder_id=blind_folder.blind_folder_id,
+                                                             blind_trial_num=int(scored_row['Trial'])).first()
 
                     if blind_trial is None:
                         blind_trial_num = int(scored_row['Trial'])
@@ -120,11 +108,11 @@ def update_trial_scores(experiment):
                         if trial is None:
                             print('Trial is none?')
                             continue
-                        blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
-                                                 reviewer_id=reviewer.reviewer_id, trial_id=trial.trial_id,
-                                                 folder_id=folder.folder_id, blind_trial_num=blind_trial_num)
-                        db.session.add(blind_trial)
-                        db.session.commit()
+                        BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                   reviewer_id=reviewer.reviewer_id,
+                                   trial_id=trial.trial_id,
+                                   folder_id=folder.folder_id,
+                                   blind_trial_num=blind_trial_num).add_to_db()
 
                     if scored_row['Movement'] == '1':
                         movt = True
@@ -133,21 +121,31 @@ def update_trial_scores(experiment):
 
                     if scored_row['Grooming'] == '1':
                         groom = True
-                    else:
+                    elif scored_row['Grooming'] == '0':
                         groom = False
+                    else:
+                        groom = None
 
-                    trial_score = SRTrialScore.query.filter(SRTrialScore.trial_id == blind_trial.trial_id,
-                                                            SRTrialScore.reviewer_id == reviewer.reviewer_id).first()
+                    trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id,
+                                                               reviewer_id=reviewer.reviewer_id).first()
 
                     if trial_score is None:
-                        db.session.add(SRTrialScore(trial_id=blind_trial.trial_id, reviewer_id=blind_trial.reviewer_id,
-                                                    reach_score=int(scored_row['Score']), abnormal_movt_score=movt,
-                                                    grooming_score=groom))
+                        if groom is None:
+                            print('I guess we have to figure this out now')
+                        SRTrialScore(trial_id=blind_trial.trial_id,
+                                     reviewer_id=blind_trial.reviewer_id,
+                                     reach_score=int(scored_row['Score']),
+                                     abnormal_movt_score=movt,
+                                     grooming_score=groom).add_to_db()
+                    elif all([trial_score.reach_score == int(scored_row['Score']),
+                              trial_score.abnormal_movt_score == movt,
+                              trial_score.grooming_score == groom]):
+                        continue
                     else:
                         trial_score.reach_score = int(scored_row['Score'])
                         trial_score.abnormal_movt_score = movt
                         trial_score.grooming_score = groom
+                        trial_score.add_to_db()
 
-                    db.session.commit()
             else:
                 print(f"Not Scored: {str(scored_blind_folder_path)}")

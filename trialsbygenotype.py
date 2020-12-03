@@ -19,8 +19,8 @@ for folder in experiment.folders:
         continue
 
     elif len(all_blind_folders) > 1:
-        # Kenny: 11, Dan: 49, Jen: 114, Alli C: 150, Krista: Too Many, Alli B: 0
-        reviewers_by_num_videos_scored = ('Kenny F', 'Dan L', 'Jen M', 'Alli C', 'Krista K', 'Alli B')
+        # Kenny: 6, Dan: 47, Jen: 105, Alli B: 149, Alli C: 131+, Krista: Too Many
+        reviewers_by_num_videos_scored = ('Kenny F', 'Dan L', 'Jen M', 'Alli B', 'Alli C', 'Krista K')
         blind_folder_reviewer_list_dict = list()
         for blind_folder in all_blind_folders:
             reviewer = dbpkg.Reviewer.query.get(blind_folder.reviewer_id)
