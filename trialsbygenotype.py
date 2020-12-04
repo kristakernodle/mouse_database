@@ -207,29 +207,35 @@ ax2.set_title("Trials with Abnormal Movements by Session and Genotype")
 plt.subplots_adjust(bottom=0.15)
 plt.savefig('/Users/Krista/Desktop/percent_abnormal_movement_by_day_scatterplot.pdf')
 
-
+from matplotlib.collections import PathCollection
 h, ax3 = plt.subplots()
 seaborn.set_theme(context='poster', style="whitegrid", font_scale=1.25)
 seaborn.set(font_scale=1.25)
-seaborn.boxplot(x="session_num", y="First Success", hue='genotype', palette=palette,
+seaborn.lineplot(x="session_num", y="Any Success", hue='genotype', palette=palette,
                 data=reach_scores_by_eartag_by_session_df)
-ax3.set_title("Single Pellet Skilled-Reaching First Success Rate by Genotype")
+seaborn.scatterplot(x="session_num", y="Any Success", hue='genotype', palette=palette,
+                data=reach_scores_by_eartag_by_session_df)
+ax3.set_xticks(list(range(1,22)))
+ax3.set_title(f'Single Pellet Skilled-Reaching \n Any Success Rate'
+              f' by Genotype')
 ax3.set(xlabel="Training Day", ylabel='Percent Success')
 plt.legend(title='Genotype')
 handles, labels = ax3.get_legend_handles_labels()
 handles_labels = list(zip(handles, labels))
+handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
 handles_labels = sorted(handles_labels, key=lambda group: group[1])
 unzipped_handles_labels = list(zip(*handles_labels))
 ax3.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
-plt.subplots_adjust(bottom=0.15)
-plt.savefig('/Users/Krista/Desktop/figures/first_success_rate_boxplot.pdf')
+plt.subplots_adjust(bottom=0.10)
+plt.savefig('/Users/kkrista/OneDrive - Umich/figures/any_success_rate_line_scatter.pdf')
 
 j, ax4 = plt.subplots()
 seaborn.set_theme(context='poster', style="whitegrid", font_scale=1.25)
 seaborn.set(font_scale=1.25)
 seaborn.boxplot(x="session_num", y="Any Success", hue='genotype', palette=palette,
                 data=reach_scores_by_eartag_by_session_df)
-ax4.set_title("Single Pellet Skilled-Reaching Any Success Rate by Genotype")
+ax4.set_title(f"Single Pellet Skilled-Reaching \n"
+              f"Any Success Rate by Genotype")
 ax4.set(xlabel="Training Day", ylabel='Percent Success')
 plt.legend(title='Genotype')
 handles, labels = ax4.get_legend_handles_labels()
