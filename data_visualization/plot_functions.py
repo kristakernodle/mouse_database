@@ -64,17 +64,17 @@ def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None
         format_and_save(figure, axis, file_name)
 
 
-def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=None,
+def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=None, genotype='genotype',
                       save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70):
     sns.set_theme(context='talk', style="darkgrid")
 
     figure, axis = plt.subplots()
     sns.lineplot(x="session_num", y=success_type, hue='genotype', palette=palette,
-                 data=data)
+                 data=data, legend=False)
 
     if group:
         sns.scatterplot(x="session_num", y=success_type, hue='genotype', palette=palette,
-                        data=data)
+                        data=data, legend=False)
 
     axis.set_ylim(0, upper_ylim)
     axis.set_xticks(list(range(1, 22)))
@@ -85,15 +85,14 @@ def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=Non
                    f"{subtitle}"
     axis.set_title(title_string)
 
-    plt.legend(title='Genotype')
-
     handles, labels = axis.get_legend_handles_labels()
+    handles_labels = list(zip(handles, labels))
 
-    if len(handles) > 2:
-        handles_labels = list(zip(handles, labels))
+    if len(handles_labels) > 2:
         handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
         handles_labels = sorted(handles_labels, key=lambda group: group[1])
         unzipped_handles_labels = list(zip(*handles_labels))
+        plt.legend(title='Genotype')
         axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
 
     if group:
@@ -105,31 +104,39 @@ def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=Non
     plt.close(figure)
 
 
-def plot_trial_numbers(trial_type, data):
+def plot_trial_numbers(trial_type, data, eartag=None, genotype=None, save_dir='/Users/Krista/Desktop/figures/'):
+
     sns.set_theme(context='talk', style="darkgrid")
     figure, axis = plt.subplots()
     sns.lineplot(x="session_num", y=trial_type, hue='genotype', palette=palette,
-                 data=data)
-    sns.scatterplot(x="session_num", y=trial_type, hue='genotype', palette=palette,
-                    data=data)
+                 data=data, legend=False)
+
+    if eartag is None:
+        sns.scatterplot(x="session_num", y=trial_type, hue='genotype', palette=palette,
+                        data=data, legend=False)
+        title_string = f"Single Pellet Skilled-Reaching \n" \
+                       f"Number of {trial_type} by Session"
+        file_name = f"{trial_type.lower().strip(' ')}_by_session.png"
+    else:
+        title_string = f"single Pellet Skilled-Reaching \n " \
+                       f"Number of {trial_type} for {eartag} ({genotype})"
+        file_name = f"{eartag}_{trial_type.lower().strip(' ')}_by_session.png"
 
     axis.set_ylim(0, 175)
     axis.set_xticks(list(range(1, 22)))
     plt.setp(axis.get_xticklabels(), rotation=90)
-    axis.set_title(f'Single Pellet Skilled-Reaching \n {trial_type} Number'
-                   f' by Genotype')
-    axis.set(xlabel='Training Session', ylabel='Percent Success')
-
-    plt.legend(title='Genotype')
+    axis.set_title(title_string)
+    axis.set(xlabel='Training Session', ylabel='Number of Trials')
 
     handles, labels = axis.get_legend_handles_labels()
     handles_labels = list(zip(handles, labels))
-    handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
-    handles_labels = sorted(handles_labels, key=lambda group: group[1])
-    unzipped_handles_labels = list(zip(*handles_labels))
-    axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
+    if len(handles_labels) > 2:
+        handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
+        handles_labels = sorted(handles_labels, key=lambda group: group[1])
+        unzipped_handles_labels = list(zip(*handles_labels))
+        plt.legend(title='Genotype')
+        axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
 
     plt.subplots_adjust(bottom=0.15, left=0.15)
-    plt.savefig(
-        f'/Users/Krista/OneDrive - Umich/figures/for_committee_meeting/{"_".join(trial_type.lower().split(" "))}_number.png')
+    plt.savefig(str(Path(save_dir).joinpath(file_name)))
     plt.close(figure)
