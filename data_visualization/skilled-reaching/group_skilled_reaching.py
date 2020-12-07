@@ -4,38 +4,39 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import database_pkg as dbpkg
+from data_visualization.plot_functions import plot_success_rate
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 
 
-def plot_success_rate(success_type):
-    sns.set_theme(context='talk', style="darkgrid")
-    figure, axis = plt.subplots()
-    sns.lineplot(x="session_num", y=success_type, hue='genotype', palette=palette,
-                 data=reach_scores_by_eartag_by_session_df)
-    sns.scatterplot(x="session_num", y=success_type, hue='genotype', palette=palette,
-                    data=reach_scores_by_eartag_by_session_df)
-
-    axis.set_ylim(0, 70)
-    axis.set_xticks(list(range(1, 22)))
-    plt.setp(axis.get_xticklabels(), rotation=90)
-    axis.set_title(f'Single Pellet Skilled-Reaching \n {success_type} Rate'
-                   f' by Genotype')
-    axis.set(xlabel='Training Session', ylabel='Percent Success')
-
-    plt.legend(title='Genotype')
-
-    handles, labels = axis.get_legend_handles_labels()
-    handles_labels = list(zip(handles, labels))
-    handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
-    handles_labels = sorted(handles_labels, key=lambda group: group[1])
-    unzipped_handles_labels = list(zip(*handles_labels))
-    axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
-
-    plt.subplots_adjust(bottom=0.15)
-    plt.savefig(
-        f'/Users/Krista/OneDrive - Umich/figures/for_committee_meeting/{"_".join(success_type.lower().split(" "))}_rate.png')
-    plt.close(figure)
+# def plot_success_rate(success_type):
+#     sns.set_theme(context='talk', style="darkgrid")
+#     figure, axis = plt.subplots()
+#     sns.lineplot(x="session_num", y=success_type, hue='genotype', palette=palette,
+#                  data=reach_scores_by_eartag_by_session_df)
+#     sns.scatterplot(x="session_num", y=success_type, hue='genotype', palette=palette,
+#                     data=reach_scores_by_eartag_by_session_df)
+#
+#     axis.set_ylim(0, 70)
+#     axis.set_xticks(list(range(1, 22)))
+#     plt.setp(axis.get_xticklabels(), rotation=90)
+#     axis.set_title(f'Single Pellet Skilled-Reaching \n {success_type} Rate'
+#                    f' by Genotype')
+#     axis.set(xlabel='Training Session', ylabel='Percent Success')
+#
+#     plt.legend(title='Genotype')
+#
+#     handles, labels = axis.get_legend_handles_labels()
+#     handles_labels = list(zip(handles, labels))
+#     handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
+#     handles_labels = sorted(handles_labels, key=lambda group: group[1])
+#     unzipped_handles_labels = list(zip(*handles_labels))
+#     axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
+#
+#     plt.subplots_adjust(bottom=0.15)
+#     plt.savefig(
+#         f'/Users/Krista/OneDrive - Umich/figures/for_committee_meeting/{"_".join(success_type.lower().split(" "))}_rate.png')
+#     plt.close(figure)
 
 
 def plot_trial_numbers(trial_type):
@@ -73,8 +74,7 @@ def plot_reach_score_count_heatmap():
         all_viable_trials = all_scored_trials[(all_scored_trials.genotype == group) &
                                               (all_scored_trials.reach_score != 0) &
                                               (all_scored_trials.reach_score != 7) &
-                                              (all_scored_trials.reach_score != 6) &
-                                              (all_scored_trials.reach_score != 9)]
+                                              (all_scored_trials.reach_score != 6)]
 
         average_score_counts = all_viable_trials.groupby(['eartag', 'session_num', 'reach_score'], as_index=False) \
             .agg('count') \
@@ -85,7 +85,7 @@ def plot_reach_score_count_heatmap():
         sns.set_theme(context='talk')
         sns.heatmap(average_score_counts.pivot("reach_score", "session_num", "genotype").fillna(0), cmap=color,
                     vmin=0, vmax=70, center=35)
-        axis.hlines([8, 5, 4, 3, 2, 1], *axis.get_xlim(), colors='grey')
+        axis.hlines([9, 8, 5, 4, 3, 2, 1], *axis.get_xlim(), colors='grey')
         axis.vlines(list(range(1, 22)), *axis.get_ylim(), colors='grey')
         axis.spines['top'].set_visible(True)
         axis.spines['top'].set_color('grey')
@@ -107,7 +107,7 @@ def plot_reach_score_count_heatmap():
 
 def plot_reach_score_percent_heatmap(df):
     # df: reach_scores_by_eartag_by_session_df
-    df = df[["eartag", "genotype", "session_num", "1", "2", "3", "4", "5", "8", "Viable Trials"]]
+    df = df[["eartag", "genotype", "session_num", "1", "2", "3", "4", "5", "8", "9", "Viable Trials"]]
     for i in df.index:
         if df.at[i, "Viable Trials"] == 0:
             df.at[i, "1"] = 0
@@ -116,6 +116,7 @@ def plot_reach_score_percent_heatmap(df):
             df.at[i, "4"] = 0
             df.at[i, "5"] = 0
             df.at[i, "8"] = 0
+            df.at[i, "9"] = 0
             continue
         df.at[i, "1"] = df.at[i, "1"] / df.at[i, "Viable Trials"] * 100
         df.at[i, "2"] = df.at[i, "2"] / df.at[i, "Viable Trials"] * 100
@@ -123,12 +124,13 @@ def plot_reach_score_percent_heatmap(df):
         df.at[i, "4"] = df.at[i, "4"] / df.at[i, "Viable Trials"] * 100
         df.at[i, "5"] = df.at[i, "5"] / df.at[i, "Viable Trials"] * 100
         df.at[i, "8"] = df.at[i, "8"] / df.at[i, "Viable Trials"] * 100
+        df.at[i, "9"] = df.at[i, "9"] / df.at[i, "Viable Trials"] * 100
 
     for_heatmap = list()
     mean = df.groupby(['genotype', 'session_num']).agg('mean')
 
     for genotype, session_num in mean.index:
-        for score in [1, 2, 3, 4, 5, 8]:
+        for score in [1, 2, 3, 4, 5, 8, 9]:
             for_heatmap.append({'genotype': genotype,
                                 'session_num': session_num,
                                 'reach_score': score,
@@ -136,12 +138,16 @@ def plot_reach_score_percent_heatmap(df):
     for_heatmap_df = pd.DataFrame.from_records(for_heatmap)
 
     for group, color in {"Control": "Blues", "Knock-Out": "Reds"}.items():
+        sns.set_theme(context='talk')
+
         figure, axis = plt.subplots()
 
         sns.heatmap(for_heatmap_df[for_heatmap_df.genotype == group].pivot("reach_score", "session_num", "percent_trials"), cmap=color,
                     vmin=0, vmax=100, center=50)
-        axis.hlines([8, 5, 4, 3, 2, 1], *axis.get_xlim(), colors='grey')
+
+        axis.hlines([1, 2, 3, 4, 5, 8, 9], *axis.get_xlim(), colors='grey')
         axis.vlines(list(range(1, 22)), *axis.get_ylim(), colors='grey')
+
         axis.spines['top'].set_visible(True)
         axis.spines['top'].set_color('grey')
         axis.spines['bottom'].set_visible(True)
@@ -150,12 +156,15 @@ def plot_reach_score_percent_heatmap(df):
         axis.spines['left'].set_color('grey')
         axis.spines['right'].set_visible(True)
         axis.spines['right'].set_color('grey')
+
         axis.set_title(f'Skilled-Reaching Reach Score By Session \n'
                        f'Average Percent of Trials for {group} Group')
+
         axis.set_xticks(list(range(1, 22)))
         axis.set_xticklabels(list(range(1, 22)))
         plt.setp(axis.get_xticklabels(), rotation=90)
         axis.set(xlabel="Training Session", ylabel="Assigned Reach Score")
+
         plt.subplots_adjust(bottom=0.1)
         plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/for_committee_meeting/'
                     f'{group.lower().strip("-")}_reach_score_avgPercentTrials_heatmap.png')
@@ -207,27 +216,27 @@ if __name__ == '__main__':
 
     reach_scores_by_eartag_by_session_df = pd.DataFrame.from_records(reach_scores_by_eartag_by_session_list_dict)
 
-    reach_scores_by_eartag_by_session_df.insert(17, "Total Trials",
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], "Total Trials",
                                                 reach_scores_by_eartag_by_session_df.iloc[:, 7:].sum(axis=1))
-    reach_scores_by_eartag_by_session_df.insert(18, "Viable Trials",
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], "Viable Trials",
                                                 reach_scores_by_eartag_by_session_df.iloc[:,
-                                                [8, 9, 10, 11, 12, 15]].sum(axis=1))
+                                                [8, 9, 10, 11, 12, 15, 16]].sum(axis=1))
 
-    reach_scores_by_eartag_by_session_df.insert(19, "First Success",
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], "First Success",
                                                 reach_scores_by_eartag_by_session_df['1'] *
                                                 100 / reach_scores_by_eartag_by_session_df['Viable Trials'])
     reach_scores_by_eartag_by_session_df['First Success'] = reach_scores_by_eartag_by_session_df[
         'First Success'].fillna(0)
 
-    reach_scores_by_eartag_by_session_df.insert(20, "Any Success",
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], "Any Success",
                                                 (reach_scores_by_eartag_by_session_df['1'] +
                                                  reach_scores_by_eartag_by_session_df['2']) * 100 /
                                                 reach_scores_by_eartag_by_session_df['Viable Trials'])
     reach_scores_by_eartag_by_session_df['Any Success'] = reach_scores_by_eartag_by_session_df['Any Success'].fillna(0)
 
-    # plot_success_rate("First Success")
-    # plot_success_rate("Any Success")
+    plot_success_rate("First Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
+    plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
     # plot_trial_numbers("Total Trials")
     # plot_trial_numbers("Viable Trials")
-    # plot_reach_score_count_heatmap()
-    plot_reach_score_percent_heatmap(reach_scores_by_eartag_by_session_df)
+    # # plot_reach_score_count_heatmap()
+    # plot_reach_score_percent_heatmap(reach_scores_by_eartag_by_session_df)
