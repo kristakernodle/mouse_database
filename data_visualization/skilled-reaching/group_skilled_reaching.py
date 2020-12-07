@@ -1,47 +1,7 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
 import pandas as pd
 
 import database_pkg as dbpkg
 from data_visualization.plot_functions import plot_success_rate, plot_trial_numbers, plot_reach_score_percent_heatmap
-
-palette = {"Control": 'b', "Knock-Out": 'r'}
-
-
-def plot_reach_score_count_heatmap():
-    for group, color in {"Control": "Blues", "Knock-Out": "Reds"}.items():
-        all_viable_trials = all_scored_trials[(all_scored_trials.genotype == group) &
-                                              (all_scored_trials.reach_score != 0) &
-                                              (all_scored_trials.reach_score != 7) &
-                                              (all_scored_trials.reach_score != 6)]
-
-        average_score_counts = all_viable_trials.groupby(['eartag', 'session_num', 'reach_score'], as_index=False) \
-            .agg('count') \
-            .groupby(['session_num', 'reach_score'], as_index=False) \
-            .agg('mean')
-
-        figure, axis = plt.subplots()
-        sns.set_theme(context='talk')
-        sns.heatmap(average_score_counts.pivot("reach_score", "session_num", "genotype").fillna(0), cmap=color,
-                    vmin=0, vmax=70, center=35)
-        axis.hlines([9, 8, 5, 4, 3, 2, 1], *axis.get_xlim(), colors='grey')
-        axis.vlines(list(range(1, 22)), *axis.get_ylim(), colors='grey')
-        axis.spines['top'].set_visible(True)
-        axis.spines['top'].set_color('grey')
-        axis.spines['bottom'].set_visible(True)
-        axis.spines['bottom'].set_color('grey')
-        axis.spines['left'].set_visible(True)
-        axis.spines['left'].set_color('grey')
-        axis.spines['right'].set_visible(True)
-        axis.spines['right'].set_color('grey')
-        axis.set_title(f'Skilled-Reaching Reach Score By Session \n'
-                       f'Average Number of Trials for {group} Group')
-        axis.set_xticks(list(range(1, 22)))
-        axis.set_xticklabels(list(range(1, 22)))
-        axis.set(xlabel="Training Session", ylabel="Assigned Reach Score")
-        plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/for_committee_meeting/'
-                    f'{group.lower().strip("-")}_reach_score_avgNumTrials_heatmap.png')
-        plt.close()
 
 
 def plot_heatmap(df):
@@ -146,5 +106,4 @@ if __name__ == '__main__':
     plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
     plot_trial_numbers("Total Trials", reach_scores_by_eartag_by_session_df)
     plot_trial_numbers("Viable Trials", reach_scores_by_eartag_by_session_df)
-    # plot_reach_score_count_heatmap()
     plot_heatmap(reach_scores_by_eartag_by_session_df)

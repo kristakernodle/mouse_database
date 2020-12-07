@@ -1,7 +1,8 @@
-import seaborn as sns
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from pathlib import Path
+import seaborn as sns
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
@@ -64,7 +65,46 @@ def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None
         format_and_save(figure, axis, file_name)
 
 
-def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=None, genotype='genotype',
+def plot_binary_movements(movement_type, data, group: bool, eartag=None, genotype=None,
+                          save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70):
+    sns.set_theme(context='talk', style="darkgrid")
+    figure, axis = plt.subplots()
+    sns.lineplot(x="session_num", y=movement_type, hue='genotype', palette=palette,
+                 data=data, legend=False)
+    if group:
+        sns.scatterplot(x="session_num", y=movement_type, hue='genotype', palette=palette,
+                        data=data, legend=False)
+
+    axis.set_ylim(0, upper_ylim)
+    axis.set_xticks(list(range(1, 22)))
+    plt.setp(axis.get_xticklabels(), rotation=90)
+    axis.set(xlabel='Training Session', ylabel='Percent Videos')
+
+    handles, labels = axis.get_legend_handles_labels()
+    handles_labels = list(zip(handles, labels))
+
+    if len(handles_labels) > 2:
+        handles_labels = [tup for tup in handles_labels if isinstance(tup[0], PathCollection)]
+        handles_labels = sorted(handles_labels, key=lambda group: group[1])
+        unzipped_handles_labels = list(zip(*handles_labels))
+        plt.legend(title='Genotype')
+        axis.legend(unzipped_handles_labels[0], unzipped_handles_labels[1])
+
+    if group:
+        file_name = f'{"_".join(movement_type.lower().split(" "))}_presence.png'
+        title_string = f"{movement_type} Behavior Presence \n" \
+                       f"in Skilled-Reaching Task Performance"
+    else:
+        file_name = f'{eartag}_{"_".join(movement_type.lower().split(" "))}_rate.png'
+        title_string = f"{movement_type} Behavior Presence \n" \
+                       f"{eartag} ({genotype})"
+    axis.set_title(title_string)
+    plt.subplots_adjust(bottom=0.15)
+    plt.savefig(str(Path(save_dir).joinpath(file_name)))
+    plt.close(figure)
+
+
+def plot_success_rate(success_type, data, group: bool, subtitle=None, eartag=None, genotype=None,
                       save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70):
     sns.set_theme(context='talk', style="darkgrid")
 

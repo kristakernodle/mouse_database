@@ -85,13 +85,13 @@ for eartag in all_scored_trials.eartag.unique():
     score_value_counts = pd.DataFrame.from_records(score_value_counts_list)
     summary_reach_scores["genotype"] = genotype
 
-    # plot_success_rate("First Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
-    #                   genotype=genotype, save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
-    # plot_success_rate("Any Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
-    #                   save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
-    #
-    # plot_trial_numbers("Total Trials", score_value_counts, eartag, genotype)
-    # plot_trial_numbers("Viable Trials", score_value_counts, eartag, genotype)
+    plot_success_rate("First Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
+                      genotype=genotype, save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
+    plot_success_rate("Any Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
+                      save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
+
+    plot_trial_numbers("Total Trials", score_value_counts, eartag, genotype)
+    plot_trial_numbers("Viable Trials", score_value_counts, eartag, genotype)
 
     for_heatmap = list()
     for i in range(0, len(score_value_counts)):
