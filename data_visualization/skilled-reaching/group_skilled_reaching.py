@@ -1,5 +1,4 @@
 import seaborn as sns
-from matplotlib.collections import PathCollection
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -143,9 +142,9 @@ if __name__ == '__main__':
                                                 reach_scores_by_eartag_by_session_df['Viable Trials'])
     reach_scores_by_eartag_by_session_df['Any Success'] = reach_scores_by_eartag_by_session_df['Any Success'].fillna(0)
 
-    # plot_success_rate("First Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
-    # plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
-    # plot_trial_numbers("Total Trials", reach_scores_by_eartag_by_session_df)
-    # plot_trial_numbers("Viable Trials", reach_scores_by_eartag_by_session_df)
-    # # plot_reach_score_count_heatmap()
+    plot_success_rate("First Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
+    plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
+    plot_trial_numbers("Total Trials", reach_scores_by_eartag_by_session_df)
+    plot_trial_numbers("Viable Trials", reach_scores_by_eartag_by_session_df)
+    # plot_reach_score_count_heatmap()
     plot_heatmap(reach_scores_by_eartag_by_session_df)
