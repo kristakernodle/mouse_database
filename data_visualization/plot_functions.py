@@ -66,7 +66,7 @@ def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None
 
 
 def plot_binary_movements(movement_type, data, group: bool, eartag=None, genotype=None,
-                          save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70):
+                          save_dir='/Users/Krista/Desktop/figures/', upper_ylim=100):
     sns.set_theme(context='talk', style="darkgrid")
     figure, axis = plt.subplots()
     sns.lineplot(x="session_num", y=movement_type, hue='genotype', palette=palette,
@@ -78,7 +78,7 @@ def plot_binary_movements(movement_type, data, group: bool, eartag=None, genotyp
     axis.set_ylim(0, upper_ylim)
     axis.set_xticks(list(range(1, 22)))
     plt.setp(axis.get_xticklabels(), rotation=90)
-    axis.set(xlabel='Training Session', ylabel='Percent Videos')
+    axis.set(xlabel='Training Session', ylabel='Percent Trials')
 
     handles, labels = axis.get_legend_handles_labels()
     handles_labels = list(zip(handles, labels))
@@ -99,7 +99,7 @@ def plot_binary_movements(movement_type, data, group: bool, eartag=None, genotyp
         title_string = f"{movement_type} Behavior Presence \n" \
                        f"{eartag} ({genotype})"
     axis.set_title(title_string)
-    plt.subplots_adjust(bottom=0.15)
+    plt.subplots_adjust(bottom=0.15, left=0.15)
     plt.savefig(str(Path(save_dir).joinpath(file_name)))
     plt.close(figure)
 
