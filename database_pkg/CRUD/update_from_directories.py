@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from database_pkg import Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
+from database_pkg import Experiment, Mouse, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
+    GroomingSummary, Date
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
@@ -14,6 +15,10 @@ def update_sessions(experiment):
         print(f'Experiment directory does not exist: {experiment.experiment_dir}')
 
     for participant in experiment.participants:
+
+        if Mouse.query.get(participant.mouse_id).eartag == 749:
+            continue
+
         sessions_search_dir = Path(participant.participant_dir).joinpath()
         if len(experiment.session_re.split('/')) > 1:
             for item in experiment.session_re.split('/')[:-1]:
@@ -27,6 +32,7 @@ def update_sessions(experiment):
             if session is None:
                 session_name = Path(session_dir).name
                 et_eartag, session_date, calibration_num, t_session_num = session_name.split('_')
+
                 Session(mouse_id=participant.mouse_id,
                         experiment_id=experiment.experiment_id,
                         session_date=Date.as_date(session_date),
@@ -150,3 +156,39 @@ def update_trial_scores(experiment):
 
             else:
                 print(f"Not Scored: {str(scored_blind_folder_path)}")
+
+
+def update_grooming_summary(experiment=Experiment.query.filter_by(experiment_name="grooming").first()):
+    for session in experiment.sessions:
+        session_dir = Path(session.session_dir)
+        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm')\
+            .joinpath(session_dir.parent.stem)\
+            .joinpath(session_dir.stem)
+
+        if not scored_session_dir.exists():
+            continue
+
+        score_sheet_path = list(scored_session_dir.glob('*.xlsx'))
+
+        if len(score_sheet_path) != 1:
+            continue
+        else:
+            score_sheet_path = score_sheet_path[0]
+
+        score_sheet = pd.read_excel(score_sheet_path, engine='openpyxl', index_col=0).transpose()
+
+        for item in score_sheet.index:
+            if 'Trial' not in item:
+                continue
+
+            GroomingSummary(session_id=session.session_id,
+                            scored_session_dir=str(score_sheet_path),
+                            trial_num=int(item.strip('Trial')),
+                            trial_length=score_sheet['Total session time (m)'][item],
+                            latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
+                            num_bouts=score_sheet["Number of Bouts"][item],
+                            total_time_grooming=score_sheet["Total Time Grooming (s)"][item],
+                            num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
+                            num_chains=score_sheet["Number of Chains"][item],
+                            num_complete_chains=score_sheet["Number of Complete Chains"][item],
+                            avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
