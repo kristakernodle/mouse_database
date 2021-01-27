@@ -74,6 +74,11 @@ class Experiment(Base):
                            primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
                                        "Session.session_id==Folder.session_id)",
                            secondaryjoin="Session.session_id == Folder.session_id")
+    scored_grooming = relationship("GroomingSummary",
+                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                                               "Session.session_id == GroomingSummary.session_id)",
+                                   secondaryjoin="Session.session_id == GroomingSummary.session_id")
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
