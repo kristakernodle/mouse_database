@@ -197,7 +197,7 @@ class Folder(Base):
 
     def create_blind_folder(self, reviewer):
         blind_name = random_string_generator()
-        while len(BlindFolder.query.filter_by(blind_name=blind_name).first()) != 0:
+        while BlindFolder.query.filter_by(blind_name=blind_name).first() is not None:
             blind_name = random_string_generator()
 
         blind_folder = BlindFolder(folder_id=self.folder_id, reviewer_id=reviewer.reviewer_id, blind_name=blind_name)
@@ -351,3 +351,5 @@ class GroomingSummary(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+## TODO session_score_counts (see hello@localhost)
