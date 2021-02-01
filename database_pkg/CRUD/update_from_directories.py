@@ -192,3 +192,7 @@ def update_grooming_summary(experiment=Experiment.query.filter_by(experiment_nam
                             num_chains=score_sheet["Number of Chains"][item],
                             num_complete_chains=score_sheet["Number of Complete Chains"][item],
                             avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
+
+
+def update_pasta_handling_scores():
+    pass
