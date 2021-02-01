@@ -16,10 +16,10 @@ def update_sessions(experiment):
 
     for participant in experiment.participants:
 
-        if Mouse.query.get(participant.mouse_id).eartag == 749:
-            continue
+        # if Mouse.query.get(participant.mouse_id).eartag == 749:
+        #     continue
 
-        sessions_search_dir = Path(participant.participant_dir).joinpath()
+        sessions_search_dir = Path(participant.participant_dir)
         if len(experiment.session_re.split('/')) > 1:
             for item in experiment.session_re.split('/')[:-1]:
                 sessions_search_dir = sessions_search_dir.joinpath(item)
@@ -31,13 +31,17 @@ def update_sessions(experiment):
             session = Session.query.filter_by(session_dir=str(session_dir)).first()
             if session is None:
                 session_name = Path(session_dir).name
-                et_eartag, session_date, calibration_num, t_session_num = session_name.split('_')
+
+                if experiment.experiment_name == 'pasta-handling':
+                    et_eartag, session_date, session_num = session_name.split('_')
+                else:
+                    et_eartag, session_date, calibration_num, session_num = session_name.split('_')
 
                 Session(mouse_id=participant.mouse_id,
                         experiment_id=experiment.experiment_id,
                         session_date=Date.as_date(session_date),
                         session_dir=session_dir,
-                        session_num=int(t_session_num.strip('T-MISNGDA'))).add_to_db()
+                        session_num=int(session_num.strip('T-MISNGDA'))).add_to_db()
 
 
 def update_folders(experiment):

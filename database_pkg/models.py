@@ -78,6 +78,10 @@ class Experiment(Base):
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
 
+    @classmethod
+    def get_by_name(cls, experiment_name):
+        return cls.query.filter_by(experiment_name=experiment_name).first()
+
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
 
