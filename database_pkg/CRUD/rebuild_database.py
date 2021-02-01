@@ -20,6 +20,7 @@ def rebuild_database(back_up_dir):
     blind_folders_full_path = Path(back_up_dir).joinpath('blind_folders.csv')
     blind_trials_full_path = Path(back_up_dir).joinpath('blind_trials.csv')
     sr_trial_scores_full_path = Path(back_up_dir).joinpath('sr_trial_scores.csv')
+    ## TODO grooming_summary_full_path
 
     reinstate_mouse(mouse_full_path)
     reinstate_experiments(experiments_full_path)
@@ -31,3 +32,4 @@ def rebuild_database(back_up_dir):
     reinstate_blind_folders(blind_folders_full_path)
     reinstate_blind_trials(blind_trials_full_path)
     reinstate_sr_trial_scores(sr_trial_scores_full_path)
+    ## TODO reinstate_grooming_summary
