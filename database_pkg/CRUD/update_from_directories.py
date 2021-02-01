@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from database_pkg import Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, Date
+from database_pkg import Experiment, Mouse, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
+    GroomingSummary, Date, PastaHandlingScores
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
@@ -14,7 +15,11 @@ def update_sessions(experiment):
         print(f'Experiment directory does not exist: {experiment.experiment_dir}')
 
     for participant in experiment.participants:
-        sessions_search_dir = Path(participant.participant_dir).joinpath()
+
+        # if Mouse.query.get(participant.mouse_id).eartag == 749:
+        #     continue
+
+        sessions_search_dir = Path(participant.participant_dir)
         if len(experiment.session_re.split('/')) > 1:
             for item in experiment.session_re.split('/')[:-1]:
                 sessions_search_dir = sessions_search_dir.joinpath(item)
@@ -26,12 +31,17 @@ def update_sessions(experiment):
             session = Session.query.filter_by(session_dir=str(session_dir)).first()
             if session is None:
                 session_name = Path(session_dir).name
-                et_eartag, session_date, calibration_num, t_session_num = session_name.split('_')
+
+                if experiment.experiment_name == 'pasta-handling':
+                    et_eartag, session_date, session_num = session_name.split('_')
+                else:
+                    et_eartag, session_date, calibration_num, session_num = session_name.split('_')
+
                 Session(mouse_id=participant.mouse_id,
                         experiment_id=experiment.experiment_id,
                         session_date=Date.as_date(session_date),
                         session_dir=session_dir,
-                        session_num=int(t_session_num.strip('T-MISNGDA'))).add_to_db()
+                        session_num=int(session_num.strip('T-MISNGDA'))).add_to_db()
 
 
 def update_folders(experiment):
@@ -150,3 +160,86 @@ def update_trial_scores(experiment):
 
             else:
                 print(f"Not Scored: {str(scored_blind_folder_path)}")
+
+
+def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
+    for session in experiment.sessions:
+        session_dir = Path(session.session_dir)
+        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm')\
+            .joinpath(session_dir.parent.stem)\
+            .joinpath(session_dir.stem)
+
+        if not scored_session_dir.exists():
+            continue
+
+        score_sheet_path = list(scored_session_dir.glob('*.xlsx'))
+
+        if len(score_sheet_path) != 1:
+            continue
+        else:
+            score_sheet_path = score_sheet_path[0]
+
+        score_sheet = pd.read_excel(score_sheet_path, engine='openpyxl', index_col=0).transpose()
+
+        for item in score_sheet.index:
+            if 'Trial' not in item:
+                continue
+
+            GroomingSummary(session_id=session.session_id,
+                            scored_session_dir=str(score_sheet_path),
+                            trial_num=int(item.strip('Trial')),
+                            trial_length=score_sheet['Total session time (m)'][item],
+                            latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
+                            num_bouts=score_sheet["Number of Bouts"][item],
+                            total_time_grooming=score_sheet["Total Time Grooming (s)"][item],
+                            num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
+                            num_chains=score_sheet["Number of Chains"][item],
+                            num_complete_chains=score_sheet["Number of Complete Chains"][item],
+                            avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
+
+
+def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
+    for session in experiment.sessions:
+        all_scored_trials = list(Path(session.session_dir).glob("*.xlsx"))
+
+        if len(all_scored_trials) == 0:
+            continue
+
+        for scored_trial in all_scored_trials:
+
+            trial_num = str(scored_trial.stem).split('_')[-1]
+            trial_num = int(trial_num.strip('T'))
+
+            score_sheet = pd.read_excel(scored_trial, engine='openpyxl', index_col=0).transpose()
+
+            boolean_values = {"Paws Together, Pasta Long": False,
+                              "Paws Apart, Pasta Short": False,
+                              "Abnormal Posture": False,
+                              "Iron Grip": False,
+                              "Guide Around Grasp": False,
+                              "Angling with Head Tilt": False}
+
+            for key in boolean_values.keys():
+                if score_sheet[key].all() > 0:
+                    boolean_values[key] = True
+
+            PastaHandlingScores(session_id=session.session_id,
+                                scored_session_dir=str(scored_trial),
+                                trial_num=trial_num,
+                                time_to_eat=score_sheet["Eating Time"]['value'],
+                                grasp_paw_start=score_sheet["Grasp Paw (at start)"]['value'],
+                                guide_paw_start=score_sheet["Guide/Support Paw (at start)"]['value'],
+                                left_forepaw_adjustments=score_sheet["Left Forepaw Adjustments"]['value'],
+                                right_forepaw_adjustments=score_sheet["Right Forepaw Adjustments"]['value'],
+                                left_forepaw_failure_to_contact=score_sheet["Left Forepaw Failure to Contact"]['value'],
+                                right_forepaw_failure_to_contact=score_sheet["Right Forepaw Failure to Contact"]['value'],
+                                guide_grasp_switch=score_sheet["Guide and Grasp Switch"]['value'],
+                                drops=score_sheet["Drop Count"]['value'],
+                                mouth_pulling=score_sheet["Mouth Pulling"]['value'],
+                                pasta_long_paws_together=boolean_values["Paws Together, Pasta Long"],
+                                pasta_short_paws_apart=boolean_values["Paws Apart, Pasta Short"],
+                                abnormal_posture=boolean_values["Abnormal Posture"],
+                                iron_grip=boolean_values["Iron Grip"],
+                                guide_around_grasp=boolean_values["Guide Around Grasp"],
+                                angling_with_head_tilt=boolean_values["Angling with Head Tilt"]).add_to_db()
+

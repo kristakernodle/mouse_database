@@ -193,4 +193,6 @@ def reinstate_sr_trial_scores(full_path):
                          abnormal_movt_score=sr_trial_score_row['abnormal_movt_score'],
                          grooming_score=sr_trial_score_row['grooming_score']).add_to_db()
 
+## TODO reinstate_grooming_summary
+
 

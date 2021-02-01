@@ -82,38 +82,51 @@ if __name__ == '__main__':
           f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n"
           f"Number of Folders With Blind Folders But No Blind Scores: {len(all_folders_no_scores)}")
 
-    # Make sure all blind folders without scores have files in appropriate toScore directories
-    for blind_folder in experiment.blind_folders():
-        if blind_folder.is_scored():
-            continue
-
-        folder = Folder.query.get(blind_folder.folder_id)
-        reviewer = Reviewer.query.get(blind_folder.reviewer_id)
-        toScore_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
-
-        if reviewer.first_name == 'Krista':
-            continue
-
-        if not toScore_path.exists():
-            os.mkdir(toScore_path)
-            for blind_trial in blind_folder.blind_trials:
-                trial = Trial.query.get(blind_trial.trial_id)
-                blind_trial_dir = str(
-                    toScore_path.joinpath(
-                        f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}{Path(trial.trial_dir).suffix}"))
-                try:
-                    shutil.copyfile(trial.trial_dir, blind_trial_dir)
-                except (Error, PermissionError) as err:
-                    # print(f"shutil.copy Error: {err}\n"
-                    #       f"Trial Directory: {trial.trial_dir}\n"
-                    #       f"BlindTrial Directory: {blind_trial_dir}\n")
-                    continue
-
-    # # Create Blind Folders
-    # folders_to_blind = random.sample(all_folders_not_blinded, num_files)
-    # print("Beginning to mask")
-    # for folder in folders_to_blind:
-    #     blind_folder = folder.create_blind_folder()
+    # # Make sure all blind folders without scores have files in appropriate toScore directories
+    # for blind_folder in experiment.blind_folders():
+    #     if blind_folder.is_scored():
+    #         continue
     #
-    #     blind_folder_dir = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
-    #     blind_folder_dir.mkdir()
+    #     folder = Folder.query.get(blind_folder.folder_id)
+    #     reviewer = Reviewer.query.get(blind_folder.reviewer_id)
+    #     toScore_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+    #
+    #     if reviewer.first_name == 'Krista':
+    #         continue
+    #
+    #     if not toScore_path.exists():
+    #         os.mkdir(toScore_path)
+    #         for blind_trial in blind_folder.blind_trials:
+    #             trial = Trial.query.get(blind_trial.trial_id)
+    #             blind_trial_dir = str(
+    #                 toScore_path.joinpath(
+    #                     f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}{Path(trial.trial_dir).suffix}"))
+    #             try:
+    #                 shutil.copyfile(trial.trial_dir, blind_trial_dir)
+    #             except (Error, PermissionError) as err:
+    #                 # print(f"shutil.copy Error: {err}\n"
+    #                 #       f"Trial Directory: {trial.trial_dir}\n"
+    #                 #       f"BlindTrial Directory: {blind_trial_dir}\n")
+    #                 continue
+
+    # Create Blind Folders
+    folders_to_blind = random.sample(all_folders_not_blinded, num_files)
+    print("Beginning to mask")
+    for folder in folders_to_blind:
+        blind_folder = folder.create_blind_folder(reviewer)
+
+        blind_folder_dir = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
+        blind_folder_dir.mkdir()
+
+        for blind_trial in blind_folder.blind_trials:
+            trial = Trial.query.get(blind_trial.trial_id)
+            blind_trial_dir = str(
+                blind_folder_dir.joinpath(
+                    f"{blind_folder.blind_name}_{blind_trial.blind_trial_num}{Path(trial.trial_dir).suffix}"))
+            try:
+                shutil.copyfile(trial.trial_dir, blind_trial_dir)
+            except (Error, PermissionError) as err:
+                print(f"shutil.copy Error: {err}\n"
+                      f"Trial Directory: {trial.trial_dir}\n"
+                      f"BlindTrial Directory: {blind_trial_dir}\n")
+                continue
