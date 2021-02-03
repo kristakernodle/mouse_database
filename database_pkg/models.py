@@ -74,6 +74,18 @@ class Experiment(Base):
                            primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
                                        "Session.session_id==Folder.session_id)",
                            secondaryjoin="Session.session_id == Folder.session_id")
+    scored_grooming = relationship("GroomingSummary",
+                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                                               "Session.session_id == GroomingSummary.session_id)",
+                                   secondaryjoin="Session.session_id == GroomingSummary.session_id")
+
+    scored_pasta_handling = relationship("PastaHandlingScores",
+                                         secondary="join(Session, PastaHandlingScores, "
+                                                   "Session.session_id == PastaHandlingScores.session_id)",
+                                         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                                                   "Session.session_id == PastaHandlingScores.session_id)",
+                                         secondaryjoin="Session.session_id == PastaHandlingScores.session_id")
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
@@ -236,13 +248,6 @@ class BlindFolder(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
-
-    # def add_blind_trials(self, scored_blind_folder_path=None):
-    #     if scored_blind_folder_path is None:
-    #         reviewer = Reviewer.query.filter(Reviewer.reviewer_id == self.reviewer_id).first()
-    #         scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
-    #             f"{self.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
-    #     dpk.CRUD.crud.add_blind_trials_from_scored_blind_folder(scored_blind_folder_path)
 
     def is_scored(self):
         if not check_if_sharedx_connected:
