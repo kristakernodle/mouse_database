@@ -1,10 +1,9 @@
 import json
 
 import pandas as pd
-from sqlalchemy.exc import IntegrityError
 
 from database_pkg import Mouse, Experiment, ParticipantDetail, Reviewer, Session, Folder, Trial, BlindFolder, \
-    BlindTrial, SRTrialScore, db
+    BlindTrial, SRTrialScore, GroomingSummary, PastaHandlingScores
 from database_pkg.utilities import parse_date, Date
 
 
@@ -193,6 +192,76 @@ def reinstate_sr_trial_scores(full_path):
                          abnormal_movt_score=sr_trial_score_row['abnormal_movt_score'],
                          grooming_score=sr_trial_score_row['grooming_score']).add_to_db()
 
-## TODO reinstate_grooming_summary
+
+def reinstate_grooming_summary(full_path):
+    grooming_summary_df = pd.read_csv(full_path,
+                                      usecols=['grooming_summary_id', 'session_id', 'scored_session_dir', 'trial_num',
+                                               'trial_length', 'latency_to_onset', 'num_bouts', 'total_time_grooming',
+                                               'num_interrupted_bouts', 'num_chains', 'num_complete_chains',
+                                               'avg_time_per_bout'],
+                                      delimiter=',',
+                                      dtype={'grooming_summary_id': str, 'session_id': str, 'scored_session_dir': str,
+                                             'trial_num': int, 'trial_length': float, 'latency_to_onset': float,
+                                             'num_bouts': int, 'total_time_grooming': float,
+                                             'num_interrupted_bouts': int, 'num_chains': int,
+                                             'num_complete_chains': int, 'avg_time_per_bout': float})
+    for index, grooming_summary_row in grooming_summary_df.iterrows():
+        if GroomingSummary.query.get(grooming_summary_row['grooming_summary_id']) is None:
+            GroomingSummary(grooming_summary_id=grooming_summary_row['grooming_summary_id'],
+                            session_id=grooming_summary_row['session_id'],
+                            scored_session_dir=grooming_summary_row['scored_session_dir'],
+                            trial_num=grooming_summary_row['trial_num'],
+                            trial_length=grooming_summary_row['trial_length'],
+                            latency_to_onset=grooming_summary_row['latency_to_onset'],
+                            num_bouts=grooming_summary_row['num_bouts'],
+                            total_time_grooming=grooming_summary_row['total_time_grooming'],
+                            num_interrupted_bouts=grooming_summary_row['num_interrupted_bouts'],
+                            num_chains=grooming_summary_row['num_chains'],
+                            num_complete_chains=grooming_summary_row['num_complete_chains'],
+                            avg_time_per_bout=grooming_summary_row['avg_time_per_bout']).add_to_db()
 
 
+def reinstate_pasta_handling_scores(full_path):
+    pasta_handling_scores_df = pd.read_csv(full_path,
+                                           usecols=['pasta_handling_score_id', 'session_id', 'scored_session_dir',
+                                                    'trial_num', 'time_to_eat', 'grasp_paw_start', 'guide_paw_start',
+                                                    'left_forepaw_adjustments', 'right_forepaw_adjustments',
+                                                    'left_forepaw_failure_to_contact',
+                                                    'right_forepaw_failure_to_contact',
+                                                    'guide_grasp_switch', 'drops', 'mouth_pulling',
+                                                    'pasta_long_paws_together', 'pasta_short_paws_apart',
+                                                    'abnormal_posture', 'iron_grip', 'guide_around_grasp',
+                                                    'angling_with_head_tilt'],
+                                           delimiter=',',
+                                           dtype={'pasta_handling_score_id': str, 'session_id': str,
+                                                  'scored_session_dir': str, 'trial_num': int, 'time_to_eat': float,
+                                                  'grasp_paw_start': str, 'guide_paw_start': str,
+                                                  'left_forepaw_adjustments': int, 'right_forepaw_adjustments': int,
+                                                  'left_forepaw_failure_to_contact': int,
+                                                  'right_forepaw_failure_to_contact': int,
+                                                  'guide_grasp_switch': int, 'drops': int, 'mouth_pulling': int,
+                                                  'pasta_long_paws_together': int, 'pasta_short_paws_apart': int,
+                                                  'abnormal_posture': int, 'iron_grip': int, 'guide_around_grasp': int,
+                                                  'angling_with_head_tilt': int})
+    for index, ph_row in pasta_handling_scores_df.iterrows():
+        if PastaHandlingScores.query.get(ph_row['pasta_handling_score_id']) is None:
+            PastaHandlingScores(pasta_handling_score_id=ph_row['pasta_handling_score_id'],
+                                session_id=ph_row['session_id'],
+                                scored_session_dir=ph_row['scored_session_dir'],
+                                trial_num=ph_row['trial_num'],
+                                time_to_eat=ph_row['time_to_eat'],
+                                grasp_paw_start=ph_row['grasp_paw_start'],
+                                guide_paw_start=ph_row['guide_paw_start'],
+                                left_forepaw_adjustments=ph_row['left_forepaw_adjustments'],
+                                right_forepaw_adjustments=ph_row['right_forepaw_adjustments'],
+                                left_forepaw_failure_to_contact=ph_row['left_forepaw_failure_to_contact'],
+                                right_forepaw_failure_to_contact=ph_row['right_forepaw_failure_to_contact'],
+                                guide_grasp_switch=ph_row['guide_grasp_switch'],
+                                drops=ph_row['drops'],
+                                mouth_pulling=ph_row['mouth_pulling'],
+                                pasta_long_paws_together=ph_row['pasta_long_paws_together'],
+                                pasta_short_paws_apart=ph_row['pasta_short_paws_apart'],
+                                abnormal_posture=ph_row['abnormal_posture'],
+                                iron_grip=ph_row['iron_grip'],
+                                guide_around_grasp=ph_row['guide_around_grasp'],
+                                angling_with_head_tilt=ph_row['angling_with_head_tilt']).add_to_db()

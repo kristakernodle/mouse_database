@@ -345,7 +345,7 @@ class GroomingSummary(Base):
     latency_to_onset = db.Column(db.Float, nullable=False)
     num_bouts = db.Column(db.SmallInteger, nullable=False)
     total_time_grooming = db.Column(db.Float, nullable=False)
-    num_interrupted_bouts = db.Column(db.Float, nullable=False)
+    num_interrupted_bouts = db.Column(db.SmallInteger, nullable=False)
     num_chains = db.Column(db.SmallInteger, nullable=False)
     num_complete_chains = db.Column(db.SmallInteger, nullable=False)
     avg_time_per_bout = db.Column(db.Float, nullable=False)
