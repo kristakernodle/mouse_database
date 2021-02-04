@@ -362,7 +362,7 @@ class GroomingSummary(Base):
         super().remove_from_db(my_object=self)
 
 
-class GroomingBouts(Base):
+class GroomingBout(Base):
     __tablename__ = 'grooming_bouts'
     grooming_bout_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
@@ -374,6 +374,9 @@ class GroomingBouts(Base):
     num_chains = db.Column(db.SmallInteger, nullable=False)
     num_complete_chains = db.Column(db.SmallInteger, nullable=False)
 
+    sequences = relationship("GroomingBoutSequence", backref='grooming_bouts')
+    chains = relationship("GroomingBoutChain", backref='grooming_bouts')
+
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
 
@@ -384,6 +387,26 @@ class GroomingBouts(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+
+class GroomingBoutSequence(Base):
+    __tablename__ = 'grooming_bout_sequences'
+    sequence_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    grooming_bout_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bouts.grooming_bout_id'), nullable=False)
+    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
+
+    chains = relationship("GroomingBoutChain", backref="grooming_bout_sequences")
+
+
+class GroomingBoutChain(Base):
+    __tablename__ = 'grooming_bout_chains'
+    chain_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    sequence_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bout_sequences.sequence_id'), nullable=False)
+    grooming_bout_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bouts.grooming_bout_id'), nullable=False)
+    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'),
+                                    nullable=False)
+    complete = db.Column(db.Boolean, nullable=False)
+    num_incorrect_transitions = db.Column(db.SmallInteger, nullable=False)
 
 
 class PastaHandlingScores(Base):
