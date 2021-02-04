@@ -198,6 +198,11 @@ def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
                             avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
 
 
+def update_grooming_bouts():
+    #TODO grooming_bouts from data directories
+    pass
+
+
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
     for session in experiment.sessions:
         all_scored_trials = list(Path(session.session_dir).glob("*.xlsx"))

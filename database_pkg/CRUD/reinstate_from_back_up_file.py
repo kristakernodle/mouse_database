@@ -265,3 +265,8 @@ def reinstate_pasta_handling_scores(full_path):
                                 iron_grip=ph_row['iron_grip'],
                                 guide_around_grasp=ph_row['guide_around_grasp'],
                                 angling_with_head_tilt=ph_row['angling_with_head_tilt']).add_to_db()
+
+
+def reinstate_grooming_bouts():
+    #TODO grooming_bouts from back up file
+    pass

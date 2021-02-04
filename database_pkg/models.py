@@ -362,6 +362,30 @@ class GroomingSummary(Base):
         super().remove_from_db(my_object=self)
 
 
+class GroomingBouts(Base):
+    __tablename__ = 'grooming_bouts'
+    grooming_bout_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
+    session_id = db.Column(UUID(as_uuid=True), db.ForeignKey('sessions.session_id'), nullable=False)
+    bout_string = db.Column(db.String, nullable=False)
+    bout_start = db.Column(db.SmallInteger, nullable=False)
+    bout_end = db.Column(db.SmallInteger, nullable=False)
+    interrupted = db.Column(db.Boolean, nullable=False)
+    num_chains = db.Column(db.SmallInteger, nullable=False)
+    num_complete_chains = db.Column(db.SmallInteger, nullable=False)
+
+    def add_to_db(self, my_object=None):
+        super().add_to_db(my_object=self)
+
+    def as_dict(self, my_object=None):
+        if my_object is None:
+            my_object = self
+        return super().as_dict(my_object)
+
+    def remove_from_db(self, my_object=None):
+        super().remove_from_db(my_object=self)
+
+
 class PastaHandlingScores(Base):
     __tablename__ = 'pasta_handling_scores'
     pasta_handling_score_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
