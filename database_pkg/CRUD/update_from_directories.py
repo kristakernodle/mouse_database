@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.io.parsers import ParserError
 
 from database_pkg import Experiment, Mouse, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
-    GroomingSummary, Date, PastaHandlingScores
+    GroomingSummary, Date, PastaHandlingScores, GroomingBout
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
@@ -198,8 +198,53 @@ def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
                             avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
 
 
-def update_grooming_bouts():
-    #TODO grooming_bouts from data directories
+def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
+    for session in experiment.sessions:
+        session_dir = Path(session.session_dir)
+        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
+            .joinpath(session_dir.parent.stem) \
+            .joinpath(session_dir.stem)
+        scored_files_by_vid = list(scored_session_dir.glob('*_*_0*.csv'))
+        scored_files_by_vid.sort()
+
+        trial_num = 0
+        for scored_file in scored_files_by_vid:
+            scored_file_df = pd.read_csv(scored_file,
+                                         usecols=['Frame Number', 'Description', 'Sequence'],
+                                         delimiter=',')
+            trial_start_df = scored_file_df[scored_file_df['Description'] == 'trial start']
+
+            if len(trial_start_df) == 0:
+                # The trial start and end are defined by the video numbers
+                file_num = int(scored_file.stem.split('_')[-1])
+                if file_num < 3:
+                    trial_num = 1
+                else:
+                    trial_num = 2
+            else:
+                print('we need to code this case still')
+
+            bout_start_df = scored_file_df[scored_file_df['Description'] == 'bout start']
+            for index in bout_start_df.index:
+                bout_start_frame, _, bout_sequence = scored_file_df.iloc[index]
+                bout_end_frame, description, _ = scored_file_df.iloc[index+1]
+                if description != 'bout end':
+                    continue
+
+                grooming_summary = GroomingSummary.query.filter_by(session_id=session.session_id, trial_num=trial_num).first()
+                if len(grooming_summary) == 1:
+                    grooming_summary = grooming_summary[0]
+                else:
+                    break
+                #
+                # GroomingBout(grooming_summary_id=,
+                #               session_id=session.session_id,
+                #               bout_string=,
+                #               bout_start=,
+                #               bout_end=,
+                #               interrupted=,
+                #               num_chains=,
+                #               num_complete_chains=)
     pass
 
 

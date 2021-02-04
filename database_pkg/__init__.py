@@ -11,5 +11,5 @@ db = SQLAlchemy(app)
 
 from .utilities import Date
 from .models import Mouse, Reviewer, Experiment, ParticipantDetail, Session, Folder, Trial, BlindFolder, BlindTrial, \
-    SRTrialScore, GroomingSummary, GroomingBouts, PastaHandlingScores
+    SRTrialScore, GroomingSummary, GroomingBout, PastaHandlingScores
 import database_pkg.CRUD as crud
