@@ -239,6 +239,7 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
                             scored_files_by_vid[scored_files_by_vid.index(scored_file) + 1],
                             usecols=['Frame Number', 'Description', 'Sequence'],
                             delimiter=',')
+                        # TODO simplify this code
                         bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continue']
                         if len(bout_continue_df) == 0:
                             bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continued']
@@ -262,6 +263,11 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
                              bout_string=bout_sequence,
                              bout_start=int(bout_start_frame),
                              bout_end=int(bout_end_frame)).add_to_db()
+
+
+def update_grooming_bout_chains(experiment=Experiment.get_by_name("grooming")):
+    #TODO grooming_bout_chains from grooming_bouts
+    pass
 
 
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):

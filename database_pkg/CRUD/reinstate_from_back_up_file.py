@@ -267,6 +267,11 @@ def reinstate_pasta_handling_scores(full_path):
                                 angling_with_head_tilt=ph_row['angling_with_head_tilt']).add_to_db()
 
 
-def reinstate_grooming_bouts():
+def reinstate_grooming_bouts(full_path):
     #TODO grooming_bouts from back up file
+    pass
+
+
+def reinstate_grooming_bout_chains_full_path(full_path):
+    #TODO grooming_bout_chains from back up file
     pass
