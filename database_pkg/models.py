@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 from database_pkg.utilities import check_if_sharedx_connected, random_string_generator
 import pandas as pd
+import numpy as np
 
 db = dpk.db
 
@@ -350,6 +351,8 @@ class GroomingSummary(Base):
     num_complete_chains = db.Column(db.SmallInteger, nullable=False)
     avg_time_per_bout = db.Column(db.Float, nullable=False)
 
+    bouts = relationship("GroomingBout", backref='grooming_summary')
+
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
 
@@ -368,14 +371,48 @@ class GroomingBout(Base):
     grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
     session_id = db.Column(UUID(as_uuid=True), db.ForeignKey('sessions.session_id'), nullable=False)
     bout_string = db.Column(db.String, nullable=False)
-    bout_start = db.Column(db.SmallInteger, nullable=False)
-    bout_end = db.Column(db.SmallInteger, nullable=False)
+    bout_start = db.Column(db.Integer, nullable=False)
+    bout_end = db.Column(db.Integer, nullable=False)
     interrupted = db.Column(db.Boolean, nullable=False)
     num_chains = db.Column(db.SmallInteger, nullable=False)
-    num_complete_chains = db.Column(db.SmallInteger, nullable=False)
 
-    sequences = relationship("GroomingBoutSequence", backref='grooming_bouts')
     chains = relationship("GroomingBoutChain", backref='grooming_bouts')
+
+    def __init__(self, grooming_summary_id, session_id, bout_string, bout_start, bout_end):
+        self.grooming_summary_id = grooming_summary_id
+        self.session_id = session_id
+        self.bout_string = bout_string
+        self.interrupted = False
+
+        self.bout_start, self.bout_end = list(map(int, [bout_start, bout_end]))
+
+        chain_strings = [f"0{'-'.join(chain.split('-'))}0" for chain in bout_string.strip('0').split('0')]
+        self.num_chains = len(chain_strings)
+
+        if self.num_chains > 1:
+            self.interrupted = True
+
+        # for chain_str in chain_strings:
+        #     correct_transitions = {(0, 1): 0,
+        #                            (1, 2): 0,
+        #                            (2, 3): 0,
+        #                            (3, 4): 0,
+        #                            (4, 5): 0,
+        #                            (5, 0): 0}
+        #     incorrect_transitions = dict()
+        #     chain_tup = tuple(map(int, chain_str.split('-')))
+        #     chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx+1]) for idx in range(len(chain_tup)-1)])
+        #     for transition in chain_transition_tup:
+        #         if transition[0]+1 == transition[1]:
+        #             correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
+        #         else:
+        #             incorrect_transitions[transition] = incorrect_transitions.get(transition, 0) + 1
+        #
+        #     GroomingBoutChain(grooming_bout_id=self.grooming_bout_id,
+        #                       grooming_summary_id=self.grooming_summary_id,
+        #                       complete=any([item == 0 for item in correct_transitions]),
+        #                       num_incorrect_transitions=len(incorrect_transitions),
+        #                       incorrect_transitions=incorrect_transitions).add_to_db()
 
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
@@ -389,24 +426,26 @@ class GroomingBout(Base):
         super().remove_from_db(my_object=self)
 
 
-class GroomingBoutSequence(Base):
-    __tablename__ = 'grooming_bout_sequences'
-    sequence_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
-    grooming_bout_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bouts.grooming_bout_id'), nullable=False)
-    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
-
-    chains = relationship("GroomingBoutChain", backref="grooming_bout_sequences")
-
-
 class GroomingBoutChain(Base):
     __tablename__ = 'grooming_bout_chains'
     chain_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
-    sequence_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bout_sequences.sequence_id'), nullable=False)
     grooming_bout_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_bouts.grooming_bout_id'), nullable=False)
     grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'),
                                     nullable=False)
     complete = db.Column(db.Boolean, nullable=False)
     num_incorrect_transitions = db.Column(db.SmallInteger, nullable=False)
+    incorrect_transitions = db.Column(db.JSON)
+
+    def add_to_db(self, my_object=None):
+        super().add_to_db(my_object=self)
+
+    def as_dict(self, my_object=None):
+        if my_object is None:
+            my_object = self
+        return super().as_dict(my_object)
+
+    def remove_from_db(self, my_object=None):
+        super().remove_from_db(my_object=self)
 
 
 class PastaHandlingScores(Base):
