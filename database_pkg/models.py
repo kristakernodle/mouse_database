@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 import sqlalchemy
 import uuid
 from pathlib import Path
-from database_pkg.utilities import check_if_sharedx_connected, random_string_generator
+from database_pkg.utilities import check_if_sharedx_connected, random_string_generator, convert_dict_keys_to_str
 import pandas as pd
 
 db = dpkg.db
@@ -408,7 +408,18 @@ class GroomingBout(Base):
         super().remove_from_db(my_object=self)
 
     def analyze_bout_to_chains(self):
-        chain_strings = [f"0{'-'.join(chain.split('-'))}0" for chain in self.bout_string.strip('0').split('0')]
+        temp_chain_strings = self.bout_string.strip('0').split('0')
+        chain_strings = list()
+        for temp_str in temp_chain_strings:
+            if temp_str.startswith('-') and temp_str.endswith('-'):
+                chain_strings.append(f"0{temp_str}0")
+            elif temp_str.startswith('-'):
+                chain_strings.append(f"0{temp_str}-0")
+            elif temp_str.endswith('-'):
+                chain_strings.append(f"0-{temp_str}0")
+            else:
+                chain_strings.append(f"0-{temp_str}-0")
+
         for chain_str in chain_strings:
             correct_transitions = {(0, 1): 0,
                                    (1, 2): 0,
@@ -416,20 +427,58 @@ class GroomingBout(Base):
                                    (3, 4): 0,
                                    (4, 5): 0,
                                    (5, 0): 0}
-            incorrect_transitions = dict()
-            chain_tup = tuple(map(int, chain_str.split('-')))
+            aborted_transitions = dict()
+            skipped_transitions = dict()
+            reversed_transitions = dict()
+            initiation_incorrect_transitions = dict()
+            try:
+                chain_tup = tuple(map(int, chain_str.split('-')))
+            except ValueError:
+                if chain_str == '0- -0':
+                    continue
+                print(chain_str)
             chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx + 1]) for idx in range(len(chain_tup) - 1)])
             for transition in chain_transition_tup:
-                if transition[0] + 1 == transition[1]:
-                    correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
+                if transition == (4, 30):
+                    print('where is this coming from?')
+                elif transition in correct_transitions.keys():
+                    # Correct transitions
+                    correct_transitions[transition] = correct_transitions \
+                                                          .get(transition, 0) + 1
+                elif transition in list(zip([0] * 4, range(2, 6))):
+                    # Transitions with incorrect initiation
+                    initiation_incorrect_transitions[transition] = initiation_incorrect_transitions.get(transition, 0) + 1
+                elif transition in list(zip(range(1, 5), [0] * 4)):
+                    # Aborted transitions (premature termination)
+                    aborted_transitions[transition] = aborted_transitions.get(transition, 0) + 1
+                elif (transition[0] - transition[1]) > 0:
+                    # Reversed transitions
+                    reversed_transitions[transition] = reversed_transitions.get(transition, 0) + 1
+                elif (transition[0] - transition[1]) < 0:
+                    # Skipped transitions
+                    skipped_transitions[transition] = skipped_transitions.get(transition, 0) + 1
+                elif transition[0] == transition[1]:
+                    continue
                 else:
-                    incorrect_transitions[transition] = incorrect_transitions.get(transition, 0) + 1
+                    print('what is this transition')
+
+            num_incorrect_transitions = len(initiation_incorrect_transitions) + \
+                                        len(aborted_transitions) + \
+                                        len(reversed_transitions) + \
+                                        len(skipped_transitions)
+            total_num_transitions = num_incorrect_transitions + sum(correct_transitions.values())
 
             GroomingBoutChain(grooming_bout_id=self.grooming_bout_id,
                               grooming_summary_id=self.grooming_summary_id,
                               complete=any([item == 0 for item in correct_transitions]),
-                              num_incorrect_transitions=len(incorrect_transitions),
-                              incorrect_transitions=incorrect_transitions).add_to_db()
+                              total_num_transitions=total_num_transitions,
+                              num_incorrect_transitions=num_incorrect_transitions,
+                              correct_transitions=convert_dict_keys_to_str(correct_transitions),
+                              aborted_transitions=convert_dict_keys_to_str(aborted_transitions),
+                              skipped_transitions=convert_dict_keys_to_str(skipped_transitions),
+                              reversed_transitions=convert_dict_keys_to_str(reversed_transitions),
+                              initiation_incorrect_transitions=convert_dict_keys_to_str(initiation_incorrect_transitions)
+                              ).add_to_db()
 
 
 class GroomingBoutChain(Base):
@@ -441,7 +490,7 @@ class GroomingBoutChain(Base):
     complete = db.Column(db.Boolean, nullable=False)
     total_num_transitions = db.Column(db.SmallInteger, nullable=False)
     num_incorrect_transitions = db.Column(db.SmallInteger, nullable=False)
-    incorrect_transitions = db.Column(db.JSON, nullable=False)
+    correct_transitions = db.Column(db.JSON, nullable=False)
     aborted_transitions = db.Column(db.JSON, nullable=False)
     skipped_transitions = db.Column(db.JSON, nullable=False)
     reversed_transitions = db.Column(db.JSON, nullable=False)
