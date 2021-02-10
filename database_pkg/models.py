@@ -72,29 +72,22 @@ class Experiment(Base):
 
     folders = relationship("Folder",
                            secondary="join(Session, Folder, Session.session_id == Folder.session_id)",
-                           primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                       "Session.session_id==Folder.session_id)",
+                           primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id==Folder.session_id)",
                            secondaryjoin="Session.session_id == Folder.session_id")
 
     grooming_bouts = relationship("GroomingBout",
-                                  secondary="join(Session, GroomingBout, "
-                                            "Session.session_id == GroomingBout.session_id)",
-                                  primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                              "Session.session_id == GroomingBout.session_id_",
+                                  secondary="join(Session, GroomingBout, Session.session_id == GroomingBout.session_id)",
+                                  primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == GroomingBout.session_id)",
                                   secondaryjoin="Session.session_id == GroomingBout.session_id")
 
     scored_grooming = relationship("GroomingSummary",
-                                   secondary="join(Session, GroomingSummary, "
-                                             "Session.session_id == GroomingSummary.session_id)",
-                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                               "Session.session_id == GroomingSummary.session_id)",
+                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == GroomingSummary.session_id)",
                                    secondaryjoin="Session.session_id == GroomingSummary.session_id")
 
     scored_pasta_handling = relationship("PastaHandlingScores",
-                                         secondary="join(Session, PastaHandlingScores, "
-                                                   "Session.session_id == PastaHandlingScores.session_id)",
-                                         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                                   "Session.session_id == PastaHandlingScores.session_id)",
+                                         secondary="join(Session, PastaHandlingScores, Session.session_id == PastaHandlingScores.session_id)",
+                                         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == PastaHandlingScores.session_id)",
                                          secondaryjoin="Session.session_id == PastaHandlingScores.session_id")
 
     def __repr__(self):
@@ -229,7 +222,7 @@ class Folder(Base):
         blind_folder = BlindFolder(folder_id=self.folder_id, reviewer_id=reviewer.reviewer_id, blind_name=blind_name)
         blind_folder.add_to_db()
 
-        all_blind_trial_nums = set(range(1, len(self.trials)+1))
+        all_blind_trial_nums = set(range(1, len(self.trials) + 1))
         for trial in self.trials:
             trial.create_blind_trial(blind_folder, all_blind_trial_nums.pop())
 
@@ -347,7 +340,8 @@ class GroomingSummary(Base):
     __table_args__ = (
         db.UniqueConstraint('session_id', 'scored_session_dir', 'trial_num'),
     )
-    grooming_summary_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    grooming_summary_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True,
+                                    nullable=False)
     session_id = db.Column(UUID(as_uuid=True), db.ForeignKey('sessions.session_id'), nullable=False)
     scored_session_dir = db.Column(db.String, nullable=False)
     trial_num = db.Column(db.SmallInteger, nullable=False)
@@ -377,7 +371,8 @@ class GroomingSummary(Base):
 class GroomingBout(Base):
     __tablename__ = 'grooming_bouts'
     grooming_bout_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
-    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'), nullable=False)
+    grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'),
+                                    nullable=False)
     session_id = db.Column(UUID(as_uuid=True), db.ForeignKey('sessions.session_id'), nullable=False)
     bout_string = db.Column(db.String, nullable=False)
     bout_start = db.Column(db.Integer, nullable=False)
@@ -401,8 +396,6 @@ class GroomingBout(Base):
         if self.num_chains > 1:
             self.interrupted = True
 
-
-
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
 
@@ -425,9 +418,9 @@ class GroomingBout(Base):
                                    (5, 0): 0}
             incorrect_transitions = dict()
             chain_tup = tuple(map(int, chain_str.split('-')))
-            chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx+1]) for idx in range(len(chain_tup)-1)])
+            chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx + 1]) for idx in range(len(chain_tup) - 1)])
             for transition in chain_transition_tup:
-                if transition[0]+1 == transition[1]:
+                if transition[0] + 1 == transition[1]:
                     correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
                 else:
                     incorrect_transitions[transition] = incorrect_transitions.get(transition, 0) + 1
@@ -446,6 +439,7 @@ class GroomingBoutChain(Base):
     grooming_summary_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_summary.grooming_summary_id'),
                                     nullable=False)
     complete = db.Column(db.Boolean, nullable=False)
+    total_num_transitions = db.Column(db.SmallInteger, nullable=False)
     num_incorrect_transitions = db.Column(db.SmallInteger, nullable=False)
     incorrect_transitions = db.Column(db.JSON, nullable=False)
     aborted_transitions = db.Column(db.JSON, nullable=False)
@@ -467,7 +461,8 @@ class GroomingBoutChain(Base):
 
 class PastaHandlingScores(Base):
     __tablename__ = 'pasta_handling_scores'
-    pasta_handling_score_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    pasta_handling_score_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True,
+                                        nullable=False)
     session_id = db.Column(UUID(as_uuid=True), db.ForeignKey('sessions.session_id'), nullable=False)
     scored_session_dir = db.Column(db.String, nullable=False)
     trial_num = db.Column(db.SmallInteger, nullable=False)
