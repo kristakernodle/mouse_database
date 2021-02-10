@@ -401,27 +401,7 @@ class GroomingBout(Base):
         if self.num_chains > 1:
             self.interrupted = True
 
-        # for chain_str in chain_strings:
-        #     correct_transitions = {(0, 1): 0,
-        #                            (1, 2): 0,
-        #                            (2, 3): 0,
-        #                            (3, 4): 0,
-        #                            (4, 5): 0,
-        #                            (5, 0): 0}
-        #     incorrect_transitions = dict()
-        #     chain_tup = tuple(map(int, chain_str.split('-')))
-        #     chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx+1]) for idx in range(len(chain_tup)-1)])
-        #     for transition in chain_transition_tup:
-        #         if transition[0]+1 == transition[1]:
-        #             correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
-        #         else:
-        #             incorrect_transitions[transition] = incorrect_transitions.get(transition, 0) + 1
-        #
-        #     GroomingBoutChain(grooming_bout_id=self.grooming_bout_id,
-        #                       grooming_summary_id=self.grooming_summary_id,
-        #                       complete=any([item == 0 for item in correct_transitions]),
-        #                       num_incorrect_transitions=len(incorrect_transitions),
-        #                       incorrect_transitions=incorrect_transitions).add_to_db()
+
 
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
@@ -434,6 +414,30 @@ class GroomingBout(Base):
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
 
+    def analyze_bout_to_chains(self):
+        chain_strings = [f"0{'-'.join(chain.split('-'))}0" for chain in self.bout_string.strip('0').split('0')]
+        for chain_str in chain_strings:
+            correct_transitions = {(0, 1): 0,
+                                   (1, 2): 0,
+                                   (2, 3): 0,
+                                   (3, 4): 0,
+                                   (4, 5): 0,
+                                   (5, 0): 0}
+            incorrect_transitions = dict()
+            chain_tup = tuple(map(int, chain_str.split('-')))
+            chain_transition_tup = tuple([(chain_tup[idx], chain_tup[idx+1]) for idx in range(len(chain_tup)-1)])
+            for transition in chain_transition_tup:
+                if transition[0]+1 == transition[1]:
+                    correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
+                else:
+                    incorrect_transitions[transition] = incorrect_transitions.get(transition, 0) + 1
+
+            GroomingBoutChain(grooming_bout_id=self.grooming_bout_id,
+                              grooming_summary_id=self.grooming_summary_id,
+                              complete=any([item == 0 for item in correct_transitions]),
+                              num_incorrect_transitions=len(incorrect_transitions),
+                              incorrect_transitions=incorrect_transitions).add_to_db()
+
 
 class GroomingBoutChain(Base):
     __tablename__ = 'grooming_bout_chains'
@@ -443,7 +447,11 @@ class GroomingBoutChain(Base):
                                     nullable=False)
     complete = db.Column(db.Boolean, nullable=False)
     num_incorrect_transitions = db.Column(db.SmallInteger, nullable=False)
-    incorrect_transitions = db.Column(db.JSON)
+    incorrect_transitions = db.Column(db.JSON, nullable=False)
+    aborted_transitions = db.Column(db.JSON, nullable=False)
+    skipped_transitions = db.Column(db.JSON, nullable=False)
+    reversed_transitions = db.Column(db.JSON, nullable=False)
+    initiation_incorrect_transitions = db.Column(db.JSON, nullable=False)
 
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)

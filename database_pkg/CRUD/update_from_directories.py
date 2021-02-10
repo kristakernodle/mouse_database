@@ -267,8 +267,7 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
 
 def update_grooming_bout_chains(experiment=Experiment.get_by_name("grooming")):
     for bout in experiment.grooming_bouts:
-        continue
-    pass
+        bout.analyze_bout_to_chains()
 
 
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
