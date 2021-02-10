@@ -1,4 +1,4 @@
-import database_pkg as dpk
+import database_pkg as dpkg
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import IntegrityError
@@ -7,9 +7,8 @@ import uuid
 from pathlib import Path
 from database_pkg.utilities import check_if_sharedx_connected, random_string_generator
 import pandas as pd
-import numpy as np
 
-db = dpk.db
+db = dpkg.db
 
 
 class Base(db.Model):
@@ -70,13 +69,23 @@ class Experiment(Base):
 
     participants = relationship("ParticipantDetail", backref="experiments")
     sessions = relationship("Session", backref="experiments")
+
     folders = relationship("Folder",
                            secondary="join(Session, Folder, Session.session_id == Folder.session_id)",
                            primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
                                        "Session.session_id==Folder.session_id)",
                            secondaryjoin="Session.session_id == Folder.session_id")
+
+    grooming_bouts = relationship("GroomingBout",
+                                  secondary="join(Session, GroomingBout, "
+                                            "Session.session_id == GroomingBout.session_id)",
+                                  primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                                              "Session.session_id == GroomingBout.session_id_",
+                                  secondaryjoin="Session.session_id == GroomingBout.session_id")
+
     scored_grooming = relationship("GroomingSummary",
-                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+                                   secondary="join(Session, GroomingSummary, "
+                                             "Session.session_id == GroomingSummary.session_id)",
                                    primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
                                                "Session.session_id == GroomingSummary.session_id)",
                                    secondaryjoin="Session.session_id == GroomingSummary.session_id")

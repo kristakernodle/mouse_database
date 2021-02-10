@@ -266,7 +266,8 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
 
 
 def update_grooming_bout_chains(experiment=Experiment.get_by_name("grooming")):
-    #TODO grooming_bout_chains from grooming_bouts
+    for bout in experiment.grooming_bouts:
+        continue
     pass
 
 
