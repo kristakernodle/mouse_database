@@ -388,7 +388,7 @@ class GroomingBout(Base):
     reversed_transitions = db.Column(db.JSON, nullable=False)
     initiation_incorrect_transitions = db.Column(db.JSON, nullable=False)
 
-    chains = relationship("GroomingBoutChain", backref='grooming_bouts')
+    # chains = relationship("GroomingBoutChain", backref='grooming_bouts')
 
     def __init__(self, grooming_summary_id, session_id, bout_string, bout_start, bout_end):
         # Set values provided to init function
