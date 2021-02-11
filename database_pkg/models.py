@@ -92,16 +92,6 @@ class Experiment(Base):
                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == GroomingBout.session_id)",
                                   secondaryjoin="Session.session_id == GroomingBout.session_id")
 
-    scored_grooming = relationship("GroomingSummary",
-                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
-                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == GroomingSummary.session_id)",
-                                   secondaryjoin="Session.session_id == GroomingSummary.session_id")
-
-    scored_pasta_handling = relationship("PastaHandlingScores",
-                                         secondary="join(Session, PastaHandlingScores, Session.session_id == PastaHandlingScores.session_id)",
-                                         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == PastaHandlingScores.session_id)",
-                                         secondaryjoin="Session.session_id == PastaHandlingScores.session_id")
-
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
 
