@@ -74,3 +74,10 @@ def random_string_generator(len_string=10):
 
     lowercase_letters_and_digits = list(string.ascii_lowercase + string.digits)
     return ''.join(random.choices(lowercase_letters_and_digits, weights=None, k=len_string))
+
+
+def convert_dict_keys_to_str(dict_in):
+    dict_out = dict()
+    for key in dict_in.keys():
+        dict_out[str(key)] = dict_in[key]
+    return dict_out

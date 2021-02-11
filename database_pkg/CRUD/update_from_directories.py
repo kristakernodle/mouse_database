@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.io.parsers import ParserError
 
 from database_pkg import Experiment, Mouse, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
-    GroomingSummary, Date, PastaHandlingScores
+    GroomingSummary, Date, PastaHandlingScores, GroomingBout, GroomingBoutChain
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
@@ -61,7 +61,6 @@ def update_folders(experiment):
 
 
 def update_trials(experiment):
-
     for session in experiment.sessions:
         all_folders = session.folders
 
@@ -165,8 +164,8 @@ def update_trial_scores(experiment):
 def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
     for session in experiment.sessions:
         session_dir = Path(session.session_dir)
-        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm')\
-            .joinpath(session_dir.parent.stem)\
+        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
+            .joinpath(session_dir.parent.stem) \
             .joinpath(session_dir.stem)
 
         if not scored_session_dir.exists():
@@ -196,6 +195,79 @@ def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
                             num_chains=score_sheet["Number of Chains"][item],
                             num_complete_chains=score_sheet["Number of Complete Chains"][item],
                             avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
+
+
+def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
+    for session in experiment.sessions:
+        session_dir = Path(session.session_dir)
+        scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
+            .joinpath(session_dir.parent.stem) \
+            .joinpath(session_dir.stem)
+        scored_files_by_vid = list(scored_session_dir.glob('*_*_0*.csv'))
+        scored_files_by_vid.sort()
+        trial_num = 0
+        for scored_file in scored_files_by_vid:
+
+            scored_file_df = pd.read_csv(scored_file,
+                                         usecols=['Frame Number', 'Description', 'Sequence'],
+                                         delimiter=',')
+            trial_start_df = scored_file_df[scored_file_df['Description'] == 'trial start']
+
+            if len(trial_start_df) == 0:
+                # The trial start and end are defined by the video numbers
+                file_num = int(scored_file.stem.split('_')[-1])
+                if file_num < 3:
+                    trial_num = 1
+                else:
+                    trial_num = 2
+            else:
+                trial_num += 1
+
+            grooming_summary = GroomingSummary.query.filter_by(session_id=session.session_id,
+                                                               trial_num=trial_num).first()
+            if grooming_summary is None:
+                continue
+
+            bout_start_df = scored_file_df[scored_file_df['Description'] == 'bout start']
+            for index in bout_start_df.index:
+                bout_start_frame, _, bout_sequence = scored_file_df.iloc[index]
+                bout_end_frame, description, _ = scored_file_df.iloc[index + 1]
+                if description.lower() != 'bout end':
+                    if description.lower() == 'video end':
+                        video_end_frame = bout_end_frame
+                        next_scored_file_df = pd.read_csv(
+                            scored_files_by_vid[scored_files_by_vid.index(scored_file) + 1],
+                            usecols=['Frame Number', 'Description', 'Sequence'],
+                            delimiter=',')
+                        # TODO simplify this code
+                        bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continue']
+                        if len(bout_continue_df) == 0:
+                            bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continued']
+                            if len(bout_continue_df) == 0:
+                                print('what')
+                        _, _, bout_continue_sequence = bout_continue_df.iloc(bout_continue_df.index[0])
+                        bout_continue_sequence = bout_continue_sequence.iloc[0]
+                        bout_end_frame, description, _ = next_scored_file_df.iloc[bout_continue_df.index[0]+1]
+
+                        if description == 'bout end':
+                            bout_end_frame = video_end_frame + bout_end_frame
+                        else:
+                            print('what')
+
+                        bout_sequence = '-'.join([bout_sequence, bout_continue_sequence])
+                    else:
+                        print('figure this case out')
+
+                GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
+                             session_id=session.session_id,
+                             bout_string=bout_sequence,
+                             bout_start=int(bout_start_frame),
+                             bout_end=int(bout_end_frame)).add_to_db()
+
+
+def update_grooming_bout_chains(experiment=Experiment.get_by_name("grooming")):
+    for bout in experiment.grooming_bouts:
+        bout.analyze_bout_to_chains()
 
 
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
@@ -232,7 +304,8 @@ def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handli
                                 left_forepaw_adjustments=score_sheet["Left Forepaw Adjustments"]['value'],
                                 right_forepaw_adjustments=score_sheet["Right Forepaw Adjustments"]['value'],
                                 left_forepaw_failure_to_contact=score_sheet["Left Forepaw Failure to Contact"]['value'],
-                                right_forepaw_failure_to_contact=score_sheet["Right Forepaw Failure to Contact"]['value'],
+                                right_forepaw_failure_to_contact=score_sheet["Right Forepaw Failure to Contact"][
+                                    'value'],
                                 guide_grasp_switch=score_sheet["Guide and Grasp Switch"]['value'],
                                 drops=score_sheet["Drop Count"]['value'],
                                 mouth_pulling=score_sheet["Mouth Pulling"]['value'],
@@ -242,4 +315,3 @@ def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handli
                                 iron_grip=boolean_values["Iron Grip"],
                                 guide_around_grasp=boolean_values["Guide Around Grasp"],
                                 angling_with_head_tilt=boolean_values["Angling with Head Tilt"]).add_to_db()
-
