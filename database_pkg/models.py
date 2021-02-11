@@ -394,7 +394,7 @@ class GroomingBout(Base):
         # Set values provided to init function
         self.grooming_summary_id = grooming_summary_id
         self.session_id = session_id
-        self.bout_string = bout_string
+        self.bout_string = bout_string.replace('--', '-')
 
         self.bout_start, self.bout_end = list(map(int, [bout_start, bout_end]))
 
@@ -428,7 +428,10 @@ class GroomingBout(Base):
         skipped_transitions = dict()
         reversed_transitions = dict()
         initiation_incorrect_transitions = dict()
-        bout_tup = tuple(map(int, self.bout_string.split('-')))
+        try:
+            bout_tup = tuple(map(int, self.bout_string.strip('-').split('-')))
+        except ValueError:
+            breakpoint()
         bout_transition_tup = tuple([(bout_tup[idx], bout_tup[idx + 1]) for idx in range(len(bout_tup) - 1)])
         for transition in bout_transition_tup:
             if transition in correct_transitions.keys():
