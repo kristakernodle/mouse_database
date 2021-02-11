@@ -197,7 +197,7 @@ def update_grooming_summary(experiment=Experiment.get_by_name("grooming")):
                             avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
 
 
-def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
+def update_grooming_bouts_and_chains(experiment=Experiment.get_by_name("grooming")):
     for session in experiment.sessions:
         session_dir = Path(session.session_dir)
         scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
@@ -242,12 +242,13 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
                         # TODO simplify this code
                         bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continue']
                         if len(bout_continue_df) == 0:
-                            bout_continue_df = next_scored_file_df[next_scored_file_df['Description'] == 'bout continued']
+                            bout_continue_df = next_scored_file_df[
+                                next_scored_file_df['Description'] == 'bout continued']
                             if len(bout_continue_df) == 0:
                                 print('what')
                         _, _, bout_continue_sequence = bout_continue_df.iloc(bout_continue_df.index[0])
                         bout_continue_sequence = bout_continue_sequence.iloc[0]
-                        bout_end_frame, description, _ = next_scored_file_df.iloc[bout_continue_df.index[0]+1]
+                        bout_end_frame, description, _ = next_scored_file_df.iloc[bout_continue_df.index[0] + 1]
 
                         if description == 'bout end':
                             bout_end_frame = video_end_frame + bout_end_frame
@@ -258,16 +259,11 @@ def update_grooming_bouts(experiment=Experiment.get_by_name("grooming")):
                     else:
                         print('figure this case out')
 
-                GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
-                             session_id=session.session_id,
-                             bout_string=bout_sequence,
-                             bout_start=int(bout_start_frame),
-                             bout_end=int(bout_end_frame)).add_to_db()
-
-
-def update_grooming_bout_chains(experiment=Experiment.get_by_name("grooming")):
-    for bout in experiment.grooming_bouts:
-        bout.analyze_bout_to_chains()
+                grooming_bout = GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
+                                             session_id=session.session_id,
+                                             bout_string=bout_sequence,
+                                             bout_start=int(bout_start_frame),
+                                             bout_end=int(bout_end_frame)).add_to_db()
 
 
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
