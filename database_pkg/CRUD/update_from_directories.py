@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from database_pkg import Experiment, Mouse, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
-    GroomingSummary, Date, PastaHandlingScores, GroomingBout, GroomingBoutChain
+from database_pkg import Experiment, Reviewer, Session, Folder, Trial, BlindTrial, SRTrialScore, \
+    GroomingSummary, Date, PastaHandlingScores, GroomingBout
 from database_pkg.utilities import get_original_video_and_frame_number_file
 import shutil
 
