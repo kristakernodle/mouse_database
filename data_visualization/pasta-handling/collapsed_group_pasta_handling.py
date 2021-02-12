@@ -4,17 +4,21 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+import database_pkg.Models.experiments
+import database_pkg.Models.mice
+import database_pkg.Models.sessions
+
 save_dir = '/Users/Krista/OneDrive - Umich/pasta_handling'
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 
-experiment = dbpkg.Experiment.get_by_name("pasta-handling")
+experiment = database_pkg.Models.experiments.Experiment.get_by_name("pasta-handling")
 
 ph_summary_data = list()
 ph_summary_data_long = list()
 for ph_summary in experiment.scored_pasta_handling:
-    session = dbpkg.Session.query.get(ph_summary.session_id)
-    mouse = dbpkg.Mouse.query.get(session.mouse_id)
+    session = database_pkg.Models.sessions.Session.query.get(ph_summary.session_id)
+    mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
     if mouse.genotype:
         genotype = 'Knock-Out'

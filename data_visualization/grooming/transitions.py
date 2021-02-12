@@ -4,20 +4,26 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+import database_pkg.Models.experiments
+import database_pkg.Models.grooming_bouts
+import database_pkg.Models.grooming_summary
+import database_pkg.Models.mice
+import database_pkg.Models.sessions
+
 save_dir = '/Users/Krista/OneDrive - Umich/grooming'
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 
-experiment = dbpkg.Experiment.get_by_name("grooming")
+experiment = database_pkg.Models.experiments.Experiment.get_by_name("grooming")
 
 grooming_data_by_bout = list()
 
-bout: dbpkg.GroomingBout
+bout: database_pkg.Models.grooming_bouts.GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = dbpkg.GroomingSummary.query.get(bout.grooming_summary_id)
-    session = dbpkg.Session.query.get(bout.session_id)
-    mouse = dbpkg.Mouse.query.get(session.mouse_id)
+    grooming_summary = database_pkg.Models.grooming_summary.GroomingSummary.query.get(bout.grooming_summary_id)
+    session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
+    mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
     if mouse.genotype:
         genotype = 'Knock-Out'
@@ -136,12 +142,12 @@ plt.close()
 ## Incorrect transition type by genotype
 all_incorrect_transitions = list()
 
-bout: dbpkg.GroomingBout
+bout: database_pkg.Models.grooming_bouts.GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = dbpkg.GroomingSummary.query.get(bout.grooming_summary_id)
-    session = dbpkg.Session.query.get(bout.session_id)
-    mouse = dbpkg.Mouse.query.get(session.mouse_id)
+    grooming_summary = database_pkg.Models.grooming_summary.GroomingSummary.query.get(bout.grooming_summary_id)
+    session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
+    mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
     if mouse.genotype:
         genotype = 'Knock-Out'

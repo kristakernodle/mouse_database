@@ -1,6 +1,8 @@
 import pandas as pd
 
 import database_pkg as dbpkg
+import database_pkg.Models.mice
+import database_pkg.Models.sessions
 from data_visualization.plot_functions import plot_success_rate, plot_trial_numbers, plot_reach_score_percent_heatmap
 
 
@@ -54,8 +56,9 @@ if __name__ == '__main__':
 
     reach_scores_by_eartag_by_session_list_dict = list()
     for session_dir, all_reach_score_counts in reach_scores_by_session_dir.iterrows():
-        session = dbpkg.Session.query.filter(dbpkg.Session.session_dir == session_dir).first()
-        mouse = dbpkg.Mouse.query.get(session.mouse_id)
+        session = database_pkg.Models.sessions.Session.query.filter(
+            database_pkg.Models.sessions.Session.session_dir == session_dir).first()
+        mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
         if mouse.genotype:
             genotype = 'Knock-Out'
