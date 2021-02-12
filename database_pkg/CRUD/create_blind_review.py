@@ -49,7 +49,7 @@ from database_pkg import BlindTrial, BlindFolder, Trial, Experiment, Reviewer, F
 
 if __name__ == '__main__':
 
-    experiment_name = 'skilled-reaching'
+    experiment_name = 'dlxCKO-skilled-reaching'
     reviewer_first_name = 'Alli'
     reviewer_last_name = 'C'
     num_files = 15
