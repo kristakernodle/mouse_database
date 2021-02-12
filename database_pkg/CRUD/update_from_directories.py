@@ -259,11 +259,11 @@ def update_grooming_bouts_and_chains(experiment=Experiment.get_by_name("grooming
                     else:
                         print('figure this case out')
 
-                grooming_bout = GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
-                                             session_id=session.session_id,
-                                             bout_string=bout_sequence,
-                                             bout_start=int(bout_start_frame),
-                                             bout_end=int(bout_end_frame)).add_to_db()
+                GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
+                             session_id=session.session_id,
+                             bout_string=bout_sequence,
+                             bout_start=int(bout_start_frame),
+                             bout_end=int(bout_end_frame)).add_to_db()
 
 
 def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handling")):
@@ -288,6 +288,7 @@ def update_pasta_handling_scores(experiment=Experiment.get_by_name("pasta-handli
                               "Angling with Head Tilt": False}
 
             for key in boolean_values.keys():
+                # TODO investigate whether the following line should be any instead of all
                 if score_sheet[key].all() > 0:
                     boolean_values[key] = True
 

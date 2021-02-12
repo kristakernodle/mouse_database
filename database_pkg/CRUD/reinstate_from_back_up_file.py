@@ -270,8 +270,3 @@ def reinstate_pasta_handling_scores(full_path):
 def reinstate_grooming_bouts(full_path):
     #TODO grooming_bouts from back up file
     pass
-
-
-# def reinstate_grooming_bout_chains_full_path(full_path):
-#     #TO-DO grooming_bout_chains from back up file
-#     pass
