@@ -7,6 +7,7 @@ from pandas import read_csv
 from .super_classes import Base
 from .blind_trials import BlindTrial
 from ..extensions import db
+from ..utilities import parse_date
 
 
 class Trial(Base):
