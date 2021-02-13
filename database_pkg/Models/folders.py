@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pandas import read_csv
 
 from .blind_folders import BlindFolder
 from .super_classes import Base
@@ -44,3 +45,20 @@ class Folder(Base):
             trial.create_blind_trial(blind_folder, all_blind_trial_nums.pop())
 
         return blind_folder
+
+    @classmethod
+    def reinstate(cls, full_path):
+        folders_data_frame = read_csv(full_path,
+                                         usecols=['folder_id', 'session_id', 'folder_dir', 'original_video',
+                                                  'trial_frame_number_file'],
+                                         delimiter=',',
+                                         dtype={'folder_id': str, 'session_id': str, 'folder_dir': str,
+                                                'original_video': str, 'trial_frame_number_file': str}
+                                         )
+        for index, folder_row in folders_data_frame.iterrows():
+            if cls.query.get(folder_row['folder_id']) is None:
+                Folder(folder_id=folder_row['folder_id'],
+                       session_id=folder_row['session_id'],
+                       folder_dir=folder_row['folder_dir'],
+                       original_video=folder_row['original_video'],
+                       trial_frame_number_file=folder_row['trial_frame_number_file']).add_to_db()

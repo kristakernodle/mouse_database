@@ -1,10 +1,19 @@
 from pathlib import Path
 
 from database_pkg import db, app
-from .reinstate_from_back_up_file import reinstate_mouse, reinstate_experiments, reinstate_participant_details, \
-    reinstate_reviewers, reinstate_sessions, reinstate_folders, reinstate_trials, reinstate_blind_folders, \
-    reinstate_blind_trials, reinstate_sr_trial_scores, reinstate_grooming_summary, reinstate_pasta_handling_scores, \
-    reinstate_grooming_bouts
+from database_pkg.Models import (Mouse,
+                                 Experiment,
+                                 ParticipantDetail,
+                                 Reviewer,
+                                 Session,
+                                 Folder,
+                                 Trial,
+                                 BlindFolder,
+                                 BlindTrial,
+                                 SRTrialScore,
+                                 GroomingBout,
+                                 GroomingSummary,
+                                 PastaHandlingScores)
 
 
 def rebuild_database(back_up_dir):
@@ -25,16 +34,16 @@ def rebuild_database(back_up_dir):
     grooming_bouts_full_path = Path(back_up_dir).joinpath('grooming_bouts.csv')
     pasta_handling_scores_full_path = Path(back_up_dir).joinpath('pasta_handling_scores.csv')
 
-    reinstate_mouse(mouse_full_path)
-    reinstate_experiments(experiments_full_path)
-    reinstate_participant_details(participant_details_full_path)
-    reinstate_reviewers(reviewers_full_path)
-    reinstate_sessions(sessions_full_path)
-    reinstate_folders(folders_full_path)
-    reinstate_trials(trials_full_path)
-    reinstate_blind_folders(blind_folders_full_path)
-    reinstate_blind_trials(blind_trials_full_path)
-    reinstate_sr_trial_scores(sr_trial_scores_full_path)
-    reinstate_grooming_summary(grooming_summary_full_path)
-    reinstate_grooming_bouts(grooming_bouts_full_path)
-    reinstate_pasta_handling_scores(pasta_handling_scores_full_path)
+    Mouse.reinstate(mouse_full_path)
+    Experiment.reinstate(experiments_full_path)
+    ParticipantDetail.reinstate(participant_details_full_path)
+    Reviewer.reinstate(reviewers_full_path)
+    Session.reinstate(sessions_full_path)
+    Folder.reinstate(folders_full_path)
+    Trial.reinstate(trials_full_path)
+    BlindFolder.reinstate(blind_folders_full_path)
+    BlindTrial.reinstate(blind_trials_full_path)
+    SRTrialScore.reinstate(sr_trial_scores_full_path)
+    GroomingSummary.reinstate(grooming_summary_full_path)
+    GroomingBout.reinstate(grooming_bouts_full_path)
+    PastaHandlingScores.reinstate(pasta_handling_scores_full_path)

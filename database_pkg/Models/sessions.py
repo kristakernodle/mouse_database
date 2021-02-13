@@ -2,9 +2,11 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pandas import read_csv
 
 from .super_classes import Base
 from ..extensions import db
+from ..utilities import parse_date
 
 
 class Session(Base):
@@ -32,3 +34,23 @@ class Session(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+    @classmethod
+    def reinstate(cls, full_path):
+        sessions_data_frame = read_csv(full_path,
+                                       usecols=['session_id', 'mouse_id', 'experiment_id', 'session_date',
+                                                'session_dir',
+                                                'session_num'],
+                                       delimiter=',',
+                                       dtype={'session_id': str, 'mouse_id': str, 'experiment_id': str,
+                                              'session_date': str, 'session_dir': str, 'session_num': int}
+                                       )
+        sessions_data_frame.session_date = sessions_data_frame.session_date.apply(lambda x: parse_date(x))
+        for index, session_row in sessions_data_frame.iterrows():
+            if cls.query.get(session_row['session_id']) is None:
+                Session(session_id=session_row['session_id'],
+                        mouse_id=session_row['mouse_id'],
+                        experiment_id=session_row['experiment_id'],
+                        session_date=session_row['session_date'],
+                        session_dir=session_row['session_dir'],
+                        session_num=session_row['session_num']).add_to_db()

@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pandas import read_csv
 
 from .super_classes import Base
 from ..extensions import db
@@ -27,3 +28,20 @@ class Reviewer(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+    @classmethod
+    def reinstate(cls, full_path):
+        reviewer_data_frame = read_csv(full_path,
+                                       usecols=['reviewer_id', 'first_name', 'last_name', 'toScore_dir',
+                                                'scored_dir'],
+                                       delimiter=',',
+                                       dtype={'reviewer_id': str, 'first_name': str,
+                                              'last_name': str, 'toScore_dir': str,
+                                              'scored_dir': str})
+        for index, reviewer_row in reviewer_data_frame.iterrows():
+            if cls.query.get(reviewer_row["reviewer_id"]) is None:
+                Reviewer(reviewer_id=reviewer_row["reviewer_id"],
+                         first_name=reviewer_row["first_name"],
+                         last_name=reviewer_row["last_name"],
+                         toScore_dir=reviewer_row["toScore_dir"],
+                         scored_dir=reviewer_row["scored_dir"]).add_to_db()

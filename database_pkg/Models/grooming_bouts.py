@@ -115,3 +115,8 @@ class GroomingBout(Base):
 
     def remove_from_db(self, my_object=None):
         super().remove_from_db(my_object=self)
+
+    @classmethod
+    def reinstate(cls, full_path):
+        # TODO grooming_bouts from back up file
+        pass

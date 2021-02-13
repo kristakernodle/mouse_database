@@ -3,6 +3,7 @@ from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pandas import read_csv
 
 from ..utilities import check_if_sharedx_connected
 from ..extensions import db
@@ -40,3 +41,19 @@ class BlindFolder(Base):
         scored_file_path = Path(reviewer.scored_dir).joinpath(
             f"{self.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
         return scored_file_path.exists()
+
+    @classmethod
+    def reinstate(cls, full_path):
+        blind_folders_df = read_csv(full_path,
+                                       usecols=['blind_folder_id', 'folder_id', 'reviewer_id', 'blind_name'],
+                                       delimiter=',',
+                                       dtype={'blind_folder_id': str, 'folder_id': str, 'reviewer_id': str,
+                                              'blind_name': str}
+                                       )
+        for index, blind_folder_row in blind_folders_df.iterrows():
+            if cls.query.get(blind_folder_row['blind_folder_id']) is None:
+                BlindFolder(blind_folder_id=blind_folder_row['blind_folder_id'],
+                            folder_id=blind_folder_row['folder_id'],
+                            reviewer_id=blind_folder_row['reviewer_id'],
+                            blind_name=blind_folder_row['blind_name']
+                            ).add_to_db()

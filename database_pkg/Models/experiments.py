@@ -44,6 +44,21 @@ class Experiment(Base):
     def participants_df(self):
         return pd.DataFrame.from_records([participant.as_dict() for participant in self.participants])
 
+    @classmethod
+    def reinstate(cls, full_path):
+        experiments_data_frame = pd.read_csv(full_path, delimiter=',',
+                                             dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
+                                                    'session_re': str, 'folder_re': str, 'trial_re': str})
+        for index, experiment_row in experiments_data_frame.iterrows():
+            if cls.query.get(experiment_row["experiment_id"]) is None:
+                Experiment(experiment_id=experiment_row["experiment_id"],
+                           experiment_dir=experiment_row["experiment_dir"],
+                           experiment_type=experiment_row["experiment_type"],
+                           experiment_name=experiment_row["experiment_name"],
+                           session_re=experiment_row["session_re"],
+                           folder_re=experiment_row["folder_re"],
+                           trial_re=experiment_row["trial_re"]).add_to_db()
+
 
 class SkilledReaching(Experiment):
     # __tablename__ = None
@@ -88,5 +103,5 @@ class PastaHandling(Experiment):
                                          secondary="join(Session, PastaHandlingScores, "
                                                    "Session.session_id == PastaHandlingScores.session_id)",
                                          primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                                   "Session.session_id == PastaHandlingScores.session_id)",
+                                                     "Session.session_id == PastaHandlingScores.session_id)",
                                          secondaryjoin="Session.session_id == PastaHandlingScores.session_id")

@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pandas import read_csv
 
 from .super_classes import Base
 from .blind_trials import BlindTrial
@@ -35,3 +36,24 @@ class Trial(Base):
         blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id, reviewer_id=blind_folder.reviewer_id,
                                  trial_id=self.trial_id, folder_id=self.folder_id, blind_trial_num=blind_trial_num)
         blind_trial.add_to_db()
+
+    @classmethod
+    def reinstate(cls, full_path):
+        trials_data_frame = read_csv(full_path,
+                                        usecols=['trial_id', 'experiment_id', 'session_id', 'folder_id', 'trial_dir',
+                                                 'trial_date', 'trial_num'],
+                                        delimiter=',',
+                                        dtype={'trial_id': str, 'experiment_id': str, 'session_id': str,
+                                               'folder_id': str,
+                                               'trial_dir': str, 'trial_date': str, 'trial_num': int}
+                                        )
+        trials_data_frame.trial_date = trials_data_frame.trial_date.apply(lambda x: parse_date(x))
+        for index, trial_row in trials_data_frame.iterrows():
+            if cls.query.get(trial_row['trial_id']) is None:
+                Trial(trial_id=trial_row['trial_id'],
+                      experiment_id=trial_row['experiment_id'],
+                      session_id=trial_row['session_id'],
+                      folder_id=trial_row['folder_id'],
+                      trial_dir=trial_row['trial_dir'],
+                      trial_date=trial_row['trial_date'],
+                      trial_num=trial_row['trial_num']).add_to_db()
