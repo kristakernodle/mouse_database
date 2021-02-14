@@ -37,8 +37,9 @@ class Folder(Base):
         while BlindFolder.query.filter_by(blind_name=blind_name).first() is not None:
             blind_name = random_string_generator()
 
-        blind_folder = BlindFolder(folder_id=self.folder_id, reviewer_id=reviewer.reviewer_id, blind_name=blind_name)
-        blind_folder.add_to_db()
+        BlindFolder(folder_id=self.folder_id, reviewer_id=reviewer.reviewer_id, blind_name=blind_name).add_to_db()
+
+        blind_folder = BlindFolder.query.filter_by(blind_name=blind_name).first()
 
         all_blind_trial_nums = set(range(1, len(self.trials) + 1))
         for trial in self.trials:
