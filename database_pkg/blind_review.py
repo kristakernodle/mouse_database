@@ -3,7 +3,7 @@ from random import sample
 from pathlib import Path
 from shutil import copyfile, Error
 
-from .Models import Experiment, Reviewer, Session, Folder, BlindFolder, Trial
+from .Models import (Experiment, Reviewer, Session, Folder, BlindFolder, Trial,)
 
 
 def create_blind_folders(experiment_name, reviewer_name, num_files=15):

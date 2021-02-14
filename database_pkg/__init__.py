@@ -18,7 +18,7 @@ from .Models import (PastaHandlingScores,
                      Grooming,
                      PastaHandling)
 from config import config
-from .create_blind_review import create_blind_folders
+from .blind_review import create_blind_folders
 
 
 def create_app():
