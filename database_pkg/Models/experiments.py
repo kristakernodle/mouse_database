@@ -7,10 +7,11 @@ import pandas as pd
 from pandas.errors import ParserError
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy import exists, and_
 
 from .reviewers import Reviewer
 from .sessions import Session
-from .SkilledReaching import Folder, Trial, BlindTrial, SRTrialScore
+from .SkilledReaching import Folder, Trial, BlindFolder, BlindTrial, SRTrialScore
 from .Grooming import GroomingSummary, GroomingBout
 from .PastaHandling import PastaHandlingScores
 from .super_classes import Base
@@ -248,6 +249,18 @@ class SkilledReaching(Experiment):
         self._update_folers()
         self._update_trials()
         self._update_trial_scores()
+
+    def status_report(self):
+        all_folders_not_blinded = Folder.query.filter(
+            ~exists().where(and_(Folder.folder_id == BlindFolder.folder_id,
+                                 Folder.session_id == Session.session_id,
+                                 Session.experiment_id == self.experiment_id))).all()
+        all_blind_folders_not_scored = BlindFolder.query.filter(
+            ~exists().where(and_(BlindFolder.folder_id == Trial.folder_id,
+                                 Trial.experiment_id == self.experiment_id,
+                                 Trial.trial_id == SRTrialScore.trial_id))).all()
+        print(f"Number Folders Not Blinded: {len(all_folders_not_blinded)}\n"
+              f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n")
 
 
 class Grooming(Experiment):

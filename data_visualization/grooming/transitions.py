@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+import database_pkg.Models.experiments
 from database_pkg import GroomingBout, GroomingSummary
 import database_pkg.Models.super_classes
 
