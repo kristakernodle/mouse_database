@@ -15,7 +15,7 @@ def create_blind_folders(experiment_name, reviewer_name, num_files=15):
     all_folders_not_blinded = Folder.query.filter(
         ~exists().where(and_(Folder.folder_id == BlindFolder.folder_id,
                              Folder.session_id == Session.session_id,
-                             Session.experiment_id != experiment.experiment_id))).all()
+                             Session.experiment_id == experiment.experiment_id))).all()
 
     # Select Folders to blind
     folders_to_blind = sample(all_folders_not_blinded, num_files)
