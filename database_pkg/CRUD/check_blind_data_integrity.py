@@ -4,15 +4,12 @@ import os.path
 from pathlib import Path
 import datetime
 import shutil
-from random import choice
 
-import database_pkg.Models.blind_folders
-import database_pkg.Models.folders
-import database_pkg.Models.reviewers
+from database_pkg import Reviewer, BlindFolder, Folder
 
 
 def get_date_modified(blind_folder):
-    reviewer = database_pkg.Models.reviewers.Reviewer.query.get(blind_folder.reviewer_id)
+    reviewer = Reviewer.query.get(blind_folder.reviewer_id)
     full_path = Path(reviewer.scored_dir).joinpath(
         f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
     if not full_path.exists():
@@ -38,7 +35,7 @@ if __name__ == '__main__':
     all_duplicates_to_keep = list()
 
     all_blind_folders_df = pd.DataFrame.from_records(
-        [blind_folder_obj.as_dict() for blind_folder_obj in database_pkg.Models.blind_folders.BlindFolder.query.all()])
+        [blind_folder_obj.as_dict() for blind_folder_obj in BlindFolder.query.all()])
 
     duplicate_folder_reviewer = all_blind_folders_df[all_blind_folders_df.duplicated(subset=['folder_id', 'reviewer_id'])][['folder_id', 'reviewer_id']]
 
@@ -47,9 +44,9 @@ if __name__ == '__main__':
         exit()
 
     for index, duplicate_pair in duplicate_folder_reviewer.iterrows():
-        all_duplicates_for_pair = database_pkg.Models.blind_folders.BlindFolder.query.filter(
-            database_pkg.Models.blind_folders.BlindFolder.folder_id == duplicate_pair.folder_id,
-            database_pkg.Models.blind_folders.BlindFolder.reviewer_id == duplicate_pair.reviewer_id).all()
+        all_duplicates_for_pair = BlindFolder.query.filter(
+            BlindFolder.folder_id == duplicate_pair.folder_id,
+            BlindFolder.reviewer_id == duplicate_pair.reviewer_id).all()
 
         # Check to see if any are already scored vs not already scored
         scored_list = [blind_folder.is_scored() for blind_folder in all_duplicates_for_pair]
@@ -77,7 +74,7 @@ if __name__ == '__main__':
                     continue
 
                 # Check if folder has been created in reviewer's toScore folder:
-                reviewer = database_pkg.Models.reviewers.Reviewer.query.get(blind_folder.reviewer_id)
+                reviewer = Reviewer.query.get(blind_folder.reviewer_id)
                 blind_folder_to_score_path = Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name)
                 if not blind_folder_to_score_path.exists():
                     # If not: remove all blind_trials and blind_folder from database
@@ -118,10 +115,10 @@ if __name__ == '__main__':
     blind_folders_no_trials = 0
     blind_folders_with_trials = 0
     for blind_folder_dict in all_duplicates_to_keep:
-        blind_folder = database_pkg.Models.blind_folders.BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
-        folder = database_pkg.Models.folders.Folder.query.get(blind_folder_dict['folder_id'])
+        blind_folder = BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
+        folder = Folder.query.get(blind_folder_dict['folder_id'])
         if len(folder.trials) != len(blind_folder.blind_trials):
-            reviewer = database_pkg.Models.reviewers.Reviewer.query.get(blind_folder_dict['reviewer_id'])
+            reviewer = Reviewer.query.get(blind_folder_dict['reviewer_id'])
             blind_folder_scored_path = Path(reviewer.scored_dir).joinpath(f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
             try:
                 shutil.move(str(blind_folder_scored_path), lost_keys_dir)
@@ -131,8 +128,8 @@ if __name__ == '__main__':
 
     for blind_folder_list in all_duplicates_for_removal:
         for blind_folder_dict in blind_folder_list:
-            blind_folder = database_pkg.Models.blind_folders.BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
-            reviewer = database_pkg.Models.reviewers.Reviewer.query.get(blind_folder.reviewer_id)
+            blind_folder = BlindFolder.query.get(blind_folder_dict['blind_folder_id'])
+            reviewer = Reviewer.query.get(blind_folder.reviewer_id)
             blind_folder_scored_path = Path(reviewer.scored_dir).joinpath(
                 f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
             try:

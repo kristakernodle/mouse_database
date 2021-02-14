@@ -4,8 +4,8 @@ import random
 import shutil
 from shutil import Error
 
-from database_pkg import BlindTrial, BlindFolder, Trial, Experiment, Reviewer, Folder, Session
-
+from database_pkg import BlindTrial, BlindFolder, Trial, Reviewer, Folder, Session
+from database_pkg.Models import Experiment
 
 # def mask_trial(trial, masked_trial_dir):
 #     BlindTrial(trial.trial_id, trial.folder_id, masked_trial_dir).save_to_db()

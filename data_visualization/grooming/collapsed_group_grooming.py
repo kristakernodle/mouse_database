@@ -1,12 +1,10 @@
-import database_pkg as dbpkg
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
 import database_pkg.Models.experiments
-import database_pkg.Models.mice
-import database_pkg.Models.sessions
+import database_pkg.Models.super_classes
 
 save_dir = '/Users/Krista/OneDrive - Umich/grooming'
 

@@ -12,9 +12,11 @@ from .Models import (PastaHandlingScores,
                      Session,
                      ParticipantDetail,
                      Reviewer,
-                     Experiment,
                      Mouse,
-                     )
+                     Experiment,
+                     SkilledReaching,
+                     Grooming,
+                     PastaHandling)
 from config import config
 
 

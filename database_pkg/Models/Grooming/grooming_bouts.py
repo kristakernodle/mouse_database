@@ -2,9 +2,9 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 
-from .super_classes import Base
-from ..extensions import db
-from ..utilities import convert_dict_keys_to_str
+from database_pkg.Models.super_classes import Base
+from database_pkg.extensions import db
+from database_pkg.utilities import convert_dict_keys_to_str
 
 
 class GroomingBout(Base):

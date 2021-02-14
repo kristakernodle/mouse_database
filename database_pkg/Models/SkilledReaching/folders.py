@@ -4,10 +4,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pandas import read_csv
 
-from .blind_folders import BlindFolder
-from .super_classes import Base
-from ..extensions import db
-from ..utilities import random_string_generator
+from database_pkg.Models.SkilledReaching.blind_folders import BlindFolder
+from database_pkg.Models.super_classes import Base
+from database_pkg.extensions import db
+from database_pkg.utilities import random_string_generator
 
 
 class Folder(Base):

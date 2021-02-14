@@ -1,13 +1,16 @@
-from .blind_folders import BlindFolder
-from .blind_trials import BlindTrial
-from .experiments import Experiment
-from .folders import Folder
-from .grooming_bouts import GroomingBout
-from .grooming_summary import GroomingSummary
 from .mice import Mouse
 from .participant_details import ParticipantDetail
-from .pasta_handling_scores import PastaHandlingScores
 from .reviewers import Reviewer
+from .experiments import Grooming, Experiment, SkilledReaching, PastaHandling
 from .sessions import Session
-from .sr_trial_scores import SRTrialScore
-from .trials import Trial
+
+from .SkilledReaching.blind_folders import BlindFolder
+from .SkilledReaching.blind_trials import BlindTrial
+from .SkilledReaching.folders import Folder
+from .SkilledReaching.sr_trial_scores import SRTrialScore
+from .SkilledReaching.trials import Trial
+
+from .Grooming.grooming_bouts import GroomingBout
+from .Grooming.grooming_summary import GroomingSummary
+
+from .PastaHandling.pasta_handling_scores import PastaHandlingScores

@@ -4,10 +4,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pandas import read_csv
 
-from .super_classes import Base
-from .blind_trials import BlindTrial
-from ..extensions import db
-from ..utilities import parse_date
+from database_pkg.Models.super_classes import Base
+from database_pkg.Models.SkilledReaching.blind_trials import BlindTrial
+from database_pkg.extensions import db
+from database_pkg.utilities import parse_date
 
 
 class Trial(Base):

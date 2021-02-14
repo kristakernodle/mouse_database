@@ -1,14 +1,10 @@
-import database_pkg as dbpkg
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-import database_pkg.Models.experiments
-import database_pkg.Models.grooming_bouts
-import database_pkg.Models.grooming_summary
-import database_pkg.Models.mice
-import database_pkg.Models.sessions
+from database_pkg import GroomingBout, GroomingSummary
+import database_pkg.Models.super_classes
 
 save_dir = '/Users/Krista/OneDrive - Umich/grooming'
 
@@ -18,10 +14,10 @@ experiment = database_pkg.Models.experiments.Experiment.get_by_name("grooming")
 
 grooming_data_by_bout = list()
 
-bout: database_pkg.Models.grooming_bouts.GroomingBout
+bout: GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = database_pkg.Models.grooming_summary.GroomingSummary.query.get(bout.grooming_summary_id)
+    grooming_summary = GroomingSummary.query.get(bout.grooming_summary_id)
     session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
     mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
@@ -142,10 +138,10 @@ plt.close()
 ## Incorrect transition type by genotype
 all_incorrect_transitions = list()
 
-bout: database_pkg.Models.grooming_bouts.GroomingBout
+bout: GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = database_pkg.Models.grooming_summary.GroomingSummary.query.get(bout.grooming_summary_id)
+    grooming_summary = GroomingSummary.query.get(bout.grooming_summary_id)
     session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
     mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
