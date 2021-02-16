@@ -1,6 +1,7 @@
-from ..extensions import db
 from sqlalchemy.exc import IntegrityError
 import sqlalchemy
+
+from ..extensions import db
 
 
 class Base(db.Model):

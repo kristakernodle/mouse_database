@@ -3,8 +3,8 @@ import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from pandas import read_csv
 
-from database_pkg.extensions import db
-from database_pkg.Models.super_classes import Base
+from ...extensions import db
+from ..super_classes import Base
 
 
 class BlindTrial(Base):

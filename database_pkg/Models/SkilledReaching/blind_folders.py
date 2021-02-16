@@ -5,10 +5,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pandas import read_csv
 
-from database_pkg.utilities import check_if_sharedx_connected
-from database_pkg.extensions import db
-from database_pkg.Models.super_classes import Base
-from database_pkg.Models.reviewers import Reviewer
+from ...utilities import check_if_sharedx_connected
+from ...extensions import db
+from ..super_classes import Base
+from ..reviewers import Reviewer
 
 
 class BlindFolder(Base):

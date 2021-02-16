@@ -5,9 +5,8 @@ import pandas as pd
 from sqlalchemy.dialects.postgresql import UUID
 
 from .super_classes import Base
-from .. import Date
 from ..extensions import db
-from ..utilities import parse_date
+from ..utilities import Date, parse_date
 
 
 class ParticipantDetail(Base):
