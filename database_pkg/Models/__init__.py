@@ -1,7 +1,7 @@
 from .mice import Mouse
 from .participant_details import ParticipantDetail
 from .reviewers import Reviewer
-from .experiments import Grooming, Experiment, SkilledReaching, PastaHandling
+from .experiments import DlxGrooming, Experiment, DlxSkilledReaching, DlxPastaHandling
 from .sessions import Session
 
 from .SkilledReaching.blind_folders import BlindFolder

@@ -14,9 +14,9 @@ from .Models import (PastaHandlingScores,
                      Reviewer,
                      Mouse,
                      Experiment,
-                     SkilledReaching,
-                     Grooming,
-                     PastaHandling)
+                     DlxSkilledReaching,
+                     DlxGrooming,
+                     DlxPastaHandling)
 from config import config
 from .blind_review import create_blind_folders
 

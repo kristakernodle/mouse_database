@@ -30,11 +30,11 @@ if __name__ == '__main__':
     all_viable_trials_sum.insert(len(all_viable_trials_sum.columns), "Abnormal Movement",
                                  100 * all_viable_trials_sum['abnormal_movt_score'] /
                                  all_viable_trials_sum["Viable Trials"])
-    all_viable_trials_sum.insert(len(all_viable_trials_sum.columns), "Grooming",
+    all_viable_trials_sum.insert(len(all_viable_trials_sum.columns), "DlxGrooming",
                                  100 * all_viable_trials_sum['grooming_score'] / all_viable_trials_sum["Viable Trials"])
 
     plot_binary_movements("Abnormal Movement", all_viable_trials_sum, group=True)
-    plot_binary_movements("Grooming", all_viable_trials_sum, group=True)
+    plot_binary_movements("DlxGrooming", all_viable_trials_sum, group=True)
     #
     # all_viable_trials_sum.reset_index(inplace=True)
     #
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     #     subject_viable_trials = all_viable_trials_sum[all_viable_trials_sum.eartag == eartag]
     #     plot_binary_movements("Abnormal Movement", subject_viable_trials, group=False, eartag=eartag,
     #                           genotype=all_viable_trials[all_viable_trials.eartag == eartag].genotype.unique()[0])
-    #     plot_binary_movements("Grooming", subject_viable_trials, group=False, eartag=eartag,
+    #     plot_binary_movements("DlxGrooming", subject_viable_trials, group=False, eartag=eartag,
     #                           genotype=all_viable_trials[all_viable_trials.eartag == eartag].genotype.unique()[0])
 
 #     all_viable_trials_score_counts = all_viable_trials.groupby(['eartag', 'genotype', 'session_num'])['reach_score'] \

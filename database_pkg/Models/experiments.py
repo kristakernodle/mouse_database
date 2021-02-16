@@ -26,7 +26,7 @@ class Experiment(Base):
     experiment_type = db.Column(db.String, nullable=False)
     experiment_name = db.Column(db.String, nullable=False, unique=True)
     session_re = db.Column(db.String, nullable=True)
-    __mapper_args__ = {'polymorphic_on': experiment_type}
+    __mapper_args__ = {'polymorphic_on': experiment_name}
 
     participants = relationship("ParticipantDetail", backref="experiments")
     sessions = relationship("Session", backref="experiments")
@@ -96,37 +96,38 @@ class Experiment(Base):
         for index, experiment_row in experiments_data_frame.iterrows():
             if cls.query.get(experiment_row["experiment_id"]) is None:
                 if experiment_row["experiment_type"] == 'skilled-reaching':
-                    SkilledReaching(experiment_id=experiment_row["experiment_id"],
-                                    experiment_dir=experiment_row["experiment_dir"],
-                                    experiment_type=experiment_row["experiment_type"],
-                                    experiment_name=experiment_row["experiment_name"],
-                                    session_re=experiment_row["session_re"],
-                                    folder_re=experiment_row["folder_re"],
-                                    trial_re=experiment_row["trial_re"]).add_to_db()
+                    DlxSkilledReaching(experiment_id=experiment_row["experiment_id"],
+                                       experiment_dir=experiment_row["experiment_dir"],
+                                       experiment_type=experiment_row["experiment_type"],
+                                       experiment_name=experiment_row["experiment_name"],
+                                       session_re=experiment_row["session_re"],
+                                       folder_re=experiment_row["folder_re"],
+                                       trial_re=experiment_row["trial_re"]).add_to_db()
                 elif experiment_row["experiment_type"] == 'grooming':
-                    Grooming(experiment_id=experiment_row["experiment_id"],
-                             experiment_dir=experiment_row["experiment_dir"],
-                             experiment_type=experiment_row["experiment_type"],
-                             experiment_name=experiment_row["experiment_name"],
-                             session_re=experiment_row["session_re"]).add_to_db()
+                    DlxGrooming(experiment_id=experiment_row["experiment_id"],
+                                experiment_dir=experiment_row["experiment_dir"],
+                                experiment_type=experiment_row["experiment_type"],
+                                experiment_name=experiment_row["experiment_name"],
+                                session_re=experiment_row["session_re"]).add_to_db()
                 elif experiment_row["experiment_type"] == 'pasta-handling':
-                    PastaHandling(experiment_id=experiment_row["experiment_id"],
-                                  experiment_dir=experiment_row["experiment_dir"],
-                                  experiment_type=experiment_row["experiment_type"],
-                                  experiment_name=experiment_row["experiment_name"],
-                                  session_re=experiment_row["session_re"]).add_to_db()
+                    DlxPastaHandling(experiment_id=experiment_row["experiment_id"],
+                                     experiment_dir=experiment_row["experiment_dir"],
+                                     experiment_type=experiment_row["experiment_type"],
+                                     experiment_name=experiment_row["experiment_name"],
+                                     session_re=experiment_row["session_re"]).add_to_db()
 
 
-class SkilledReaching(Experiment):
-    __mapper_args__ = {'polymorphic_identity': 'skilled-reaching'}
+class DlxSkilledReaching(Experiment):
+    __mapper_args__ = {'polymorphic_identity': 'dlxCKO-skilled-reaching'}
 
     folder_re = db.Column(db.String, nullable=True)
     trial_re = db.Column(db.String, nullable=True)
 
-    folders = relationship("Folder",
-                           secondary="join(Session, Folder, Session.session_id == Folder.session_id)",
-                           primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id==Folder.session_id)",
-                           secondaryjoin="Session.session_id == Folder.session_id")
+    folders = relationship(
+        "Folder",
+        secondary="join(Session, Folder, Session.session_id == Folder.session_id)",
+        primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id==Folder.session_id)",
+        secondaryjoin="Session.session_id == Folder.session_id")
 
     def blind_folders(self):
         all_blind_folders = list()
@@ -179,11 +180,11 @@ class SkilledReaching(Experiment):
                     try:
                         all_blind_folder_scores = pd.read_csv(
                             scored_blind_folder_path,
-                            usecols=['Trial', 'Score', 'Movement', 'Grooming'],
+                            usecols=['Trial', 'Score', 'Movement', 'DlxGrooming'],
                             delimiter=',',
-                            dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                            dtype={'Trial': float, 'Score': float, 'Movement': str, 'DlxGrooming': str}
                         )
-                    except ParserError:
+                    except (ParserError, ValueError):
                         print(f"Reformat file {scored_blind_folder_path}")
                         shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
                         continue
@@ -263,20 +264,90 @@ class SkilledReaching(Experiment):
               f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n")
 
 
-class Grooming(Experiment):
-    # __tablename__ = None
-    __mapper_args__ = {'polymorphic_identity': 'grooming'}
+class DYT1SkilledReaching(DlxSkilledReaching):
+    __mapper_args__ = {'polymorphic_identity': 'dyt1-skilled-reaching'}
 
-    scored_grooming = relationship("GroomingSummary",
-                                   secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
-                                   primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                                               "Session.session_id == GroomingSummary.session_id)",
-                                   secondaryjoin="Session.session_id == GroomingSummary.session_id")
+    def _update_trial_scores(self):
+        for folder in self.folders:
+            # noinspection PyTypeChecker
+            for blind_folder in folder.score_folders:
+                reviewer = Reviewer.query.get(blind_folder.reviewer_id)
+                scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
+                    f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
 
-    grooming_bouts = relationship("GroomingBout",
-                                  secondary="join(Session, GroomingBout, Session.session_id == GroomingBout.session_id)",
-                                  primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, Session.session_id == GroomingBout.session_id)",
-                                  secondaryjoin="Session.session_id == GroomingBout.session_id")
+                if scored_blind_folder_path.exists():
+                    try:
+                        all_blind_folder_scores = pd.read_csv(
+                            scored_blind_folder_path,
+                            usecols=['Trial', 'Score'],
+                            delimiter=',',
+                            dtype={'Trial': float, 'Score': float}
+                        )
+                    except (ParserError, ValueError):
+                        print(f"Reformat file {scored_blind_folder_path}")
+                        shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
+                        continue
+
+                    for index, scored_row in all_blind_folder_scores.iterrows():
+                        if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
+                            continue
+
+                        blind_trial = BlindTrial.query.filter_by(blind_folder_id=blind_folder.blind_folder_id,
+                                                                 blind_trial_num=int(scored_row['Trial'])).first()
+
+                        if blind_trial is None:
+                            blind_trial_num = int(scored_row['Trial'])
+                            trial = Trial.query.filter_by(folder_id=folder.folder_id, trial_num=blind_trial_num).first()
+                            if trial is None:
+                                print('Trial is none?')
+                                continue
+                            blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                                     reviewer_id=reviewer.reviewer_id,
+                                                     trial_id=trial.trial_id,
+                                                     folder_id=folder.folder_id,
+                                                     blind_trial_num=blind_trial_num)
+                            blind_trial.add_to_db()
+
+                        trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id,
+                                                                   reviewer_id=reviewer.reviewer_id).first()
+
+                        if trial_score is None:
+                            SRTrialScore(trial_id=blind_trial.trial_id,
+                                         reviewer_id=blind_trial.reviewer_id,
+                                         reach_score=int(scored_row['Score'])).add_to_db()
+                        elif trial_score.reach_score == int(scored_row['Score']):
+                            continue
+                        else:
+                            trial_score.reach_score = int(scored_row['Score'])
+                            # Do I need to create an update method? Look for integrity errors on return
+                            trial_score.add_to_db()
+
+                else:
+                    print(f"Not Scored: {str(scored_blind_folder_path)}")
+
+    def update(self):
+        super()._update_sessions()
+        super()._update_folers()
+        super()._update_trials()
+        self._update_trial_scores()
+
+
+class DlxGrooming(Experiment):
+    __mapper_args__ = {'polymorphic_identity': 'dlxCKO-grooming'}
+
+    scored_grooming = relationship(
+        "GroomingSummary",
+        secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+        primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                    "Session.session_id == GroomingSummary.session_id)",
+        secondaryjoin="Session.session_id == GroomingSummary.session_id")
+
+    grooming_bouts = relationship(
+        "GroomingBout",
+        secondary="join(Session, GroomingBout, Session.session_id == GroomingBout.session_id)",
+        primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
+                    "Session.session_id == GroomingBout.session_id)",
+        secondaryjoin="Session.session_id == GroomingBout.session_id")
 
     def _update_grooming_summary(self):
         # noinspection PyTypeChecker
@@ -308,7 +379,7 @@ class Grooming(Experiment):
                                 trial_length=score_sheet['Total session time (m)'][item],
                                 latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
                                 num_bouts=score_sheet["Number of Bouts"][item],
-                                total_time_grooming=score_sheet["Total Time Grooming (s)"][item],
+                                total_time_grooming=score_sheet["Total Time DlxGrooming (s)"][item],
                                 num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
                                 num_chains=score_sheet["Number of Chains"][item],
                                 num_complete_chains=score_sheet["Number of Complete Chains"][item],
@@ -390,9 +461,8 @@ class Grooming(Experiment):
         self._update_grooming_bouts_and_chains()
 
 
-class PastaHandling(Experiment):
-    # __tablename__ = None
-    __mapper_args__ = {'polymorphic_identity': 'pasta-handling'}
+class DlxPastaHandling(Experiment):
+    __mapper_args__ = {'polymorphic_identity': 'dlxCKO-pasta-handling'}
 
     scored_pasta_handling = relationship("PastaHandlingScores",
                                          secondary="join(Session, PastaHandlingScores, "
