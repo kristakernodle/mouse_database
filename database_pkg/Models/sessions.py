@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -54,3 +55,4 @@ class Session(Base):
                         session_date=session_row['session_date'],
                         session_dir=session_row['session_dir'],
                         session_num=session_row['session_num']).add_to_db()
+

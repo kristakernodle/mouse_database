@@ -23,7 +23,6 @@ class Experiment(Base):
     __tablename__ = 'experiments'
     experiment_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     experiment_dir = db.Column(db.String, nullable=False, unique=True)
-    experiment_type = db.Column(db.String, nullable=False)
     experiment_name = db.Column(db.String, nullable=False, unique=True)
     session_re = db.Column(db.String, nullable=True)
     __mapper_args__ = {'polymorphic_on': experiment_name}
@@ -136,7 +135,7 @@ class DlxSkilledReaching(Experiment):
             all_blind_folders.extend(folder.score_folders)
         return all_blind_folders
 
-    def _update_folers(self):
+    def _update_folders(self):
         # noinspection PyTypeChecker
         for session in self.sessions:
             all_folders = Path(session.session_dir).glob(f'{self.folder_re}')

@@ -1,24 +1,24 @@
 from pathlib import Path
 
-from database_pkg import db, app
-from database_pkg.Models import (Mouse,
-                                 Experiment,
-                                 ParticipantDetail,
-                                 Reviewer,
-                                 Session,
-                                 Folder,
-                                 Trial,
-                                 BlindFolder,
-                                 BlindTrial,
-                                 SRTrialScore,
-                                 GroomingBout,
-                                 GroomingSummary,
-                                 PastaHandlingScores)
+from database_pkg import (db,
+                          Mouse,
+                          Experiment,
+                          ParticipantDetail,
+                          Reviewer,
+                          Session,
+                          Folder,
+                          Trial,
+                          BlindTrial,
+                          BlindFolder,
+                          SRTrialScore,
+                          GroomingBout,
+                          GroomingSummary,
+                          PastaHandlingScores)
 
 
 def rebuild_database(back_up_dir):
-    db.drop_all(app=app)
-    db.create_all(app=app)
+    db.drop_all()
+    db.create_all()
 
     mouse_full_path = Path(back_up_dir).joinpath('mice.csv')
     experiments_full_path = Path(back_up_dir).joinpath('experiments.csv')
@@ -47,3 +47,7 @@ def rebuild_database(back_up_dir):
     GroomingSummary.reinstate(grooming_summary_full_path)
     GroomingBout.reinstate(grooming_bouts_full_path)
     PastaHandlingScores.reinstate(pasta_handling_scores_full_path)
+
+
+if __name__ == '__main__':
+    rebuild_database('/Volumes/SharedX/Neuro-Leventhal/data/mouseSkilledReaching/back_up_csv/20210212')
