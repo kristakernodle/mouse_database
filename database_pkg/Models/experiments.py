@@ -86,31 +86,38 @@ class Experiment(Base):
                             session_date=Date.as_date(session_date),
                             session_dir=session_dir,
                             session_num=int(session_num.strip('T-MISNGDA'))).add_to_db()
-    # TODO Fix this to reflect changes in experiment_type/experiment_name
-    # @classmethod
-    # def reinstate(cls, full_path):
-    #     experiments_data_frame = pd.read_csv(full_path, delimiter=',',
-    #                                          dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
-    #                                                 'session_re': str, 'folder_re': str, 'trial_re': str})
-    #     for index, experiment_row in experiments_data_frame.iterrows():
-    #         if cls.query.get(experiment_row["experiment_id"]) is None:
-    #             if experiment_row["experiment_type"] == 'skilled-reaching':
-    #                 DlxSkilledReaching(experiment_id=experiment_row["experiment_id"],
-    #                                    experiment_dir=experiment_row["experiment_dir"],
-    #                                    experiment_name=experiment_row["experiment_name"],
-    #                                    session_re=experiment_row["session_re"],
-    #                                    folder_re=experiment_row["folder_re"],
-    #                                    trial_re=experiment_row["trial_re"]).add_to_db()
-    #             elif experiment_row["experiment_type"] == 'grooming':
-    #                 DlxGrooming(experiment_id=experiment_row["experiment_id"],
-    #                             experiment_dir=experiment_row["experiment_dir"],
-    #                             experiment_name=experiment_row["experiment_name"],
-    #                             session_re=experiment_row["session_re"]).add_to_db()
-    #             elif experiment_row["experiment_type"] == 'pasta-handling':
-    #                 DlxPastaHandling(experiment_id=experiment_row["experiment_id"],
-    #                                  experiment_dir=experiment_row["experiment_dir"],
-    #                                  experiment_name=experiment_row["experiment_name"],
-    #                                  session_re=experiment_row["session_re"]).add_to_db()
+
+    @classmethod
+    def reinstate(cls, full_path):
+        experiments_data_frame = pd.read_csv(full_path, delimiter=',',
+                                             dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
+                                                    'session_re': str, 'folder_re': str, 'trial_re': str})
+        for index, experiment_row in experiments_data_frame.iterrows():
+            if cls.query.get(experiment_row["experiment_id"]) is None:
+                if experiment_row["experiment_name"] == 'dlxCKO-skilled-reaching':
+                    DlxSkilledReaching(experiment_id=experiment_row["experiment_id"],
+                                       experiment_dir=experiment_row["experiment_dir"],
+                                       experiment_name=experiment_row["experiment_name"],
+                                       session_re=experiment_row["session_re"],
+                                       folder_re=experiment_row["folder_re"],
+                                       trial_re=experiment_row["trial_re"]).add_to_db()
+                elif experiment_row["experiment_name"] == 'dlxCKO-grooming':
+                    DlxGrooming(experiment_id=experiment_row["experiment_id"],
+                                experiment_dir=experiment_row["experiment_dir"],
+                                experiment_name=experiment_row["experiment_name"],
+                                session_re=experiment_row["session_re"]).add_to_db()
+                elif experiment_row["experiment_name"] == 'dlxCKO-pasta-handling':
+                    DlxPastaHandling(experiment_id=experiment_row["experiment_id"],
+                                     experiment_dir=experiment_row["experiment_dir"],
+                                     experiment_name=experiment_row["experiment_name"],
+                                     session_re=experiment_row["session_re"]).add_to_db()
+                elif experiment_row["experiment_name"] == 'dyt1-skilled-reaching':
+                    DYT1SkilledReaching(experiment_id=experiment_row["experiment_id"],
+                                        experiment_dir=experiment_row["experiment_dir"],
+                                        experiment_name=experiment_row["experiment_name"],
+                                        session_re=experiment_row["session_re"],
+                                        folder_re=experiment_row["folder_re"],
+                                        trial_re=experiment_row["trial_re"]).add_to_db()
 
 
 class DlxSkilledReaching(Experiment):
@@ -156,7 +163,6 @@ class DlxSkilledReaching(Experiment):
                 trial = Trial.query.filter_by(trial_dir=str(trial_dir)).first()
                 if trial is None:
                     trial_name = trial_dir.stem
-                    # TODO The trial_num are not getting saved, why?
                     trial_num = trial_name.split('_')[-1].strip('RTG')
                     Trial(experiment_id=self.experiment_id,
                           session_id=folder.session_id,
