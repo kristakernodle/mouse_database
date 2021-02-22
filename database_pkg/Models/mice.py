@@ -14,7 +14,7 @@ class Mouse(Base):
     mouse_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
     eartag = db.Column(db.Integer, nullable=False, unique=True)
     birthdate = db.Column(db.Date, nullable=False)
-    genotype = db.Column(db.Boolean, nullable=False)
+    genotype = db.Column(db.String, nullable=False)
     sex = db.Column(db.String)
 
     participant_details = relationship("ParticipantDetail", backref="mice")
@@ -34,6 +34,10 @@ class Mouse(Base):
         super().remove_from_db(my_object=self)
 
     @classmethod
+    def get_by_eartag(cls, eartag: int):
+        return cls.query.filter_by(eartag=eartag).first()
+
+    @classmethod
     def reinstate(cls, full_path):
         mouse_data_frame = read_csv(full_path,
                                     usecols=['mouse_id', 'eartag', 'birthdate', 'genotype', 'sex'],
@@ -41,7 +45,6 @@ class Mouse(Base):
                                     dtype={'mouse_id': str, 'eartag': str, 'birthdate': str, 'genotype': str,
                                            'sex': str}
                                     )
-        mouse_data_frame.genotype = mouse_data_frame.genotype.apply(lambda x: x == 'TRUE' or x == 'true')
         mouse_data_frame.birthdate = mouse_data_frame.birthdate.apply(lambda x: parse_date(x))
         for index, mouse_row in mouse_data_frame.iterrows():
             if cls.query.get(mouse_row["mouse_id"]) is None:

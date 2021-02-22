@@ -16,7 +16,8 @@ from .Models import (PastaHandlingScores,
                      Experiment,
                      DlxSkilledReaching,
                      DlxGrooming,
-                     DlxPastaHandling)
+                     DlxPastaHandling,
+                     DYT1SkilledReaching)
 from config import config
 from .blind_review import create_blind_folders
 from .sr_video_processing import blind_review_full_processing

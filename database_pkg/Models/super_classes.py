@@ -26,3 +26,10 @@ class Base(db.Model):
             db.session.commit()
         except:
             db.session.rollback()
+
+    def update(self):
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            breakpoint()

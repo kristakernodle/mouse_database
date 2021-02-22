@@ -76,7 +76,7 @@ class Experiment(Base):
                 if session is None:
                     session_name = Path(session_dir).name
 
-                    if self.experiment_type == 'pasta-handling':
+                    if self.experiment_name in ['dlxCKO-pasta-handling', 'dyt1-skilled-reaching']:
                         et_eartag, session_date, session_num = session_name.split('_')
                     else:
                         et_eartag, session_date, calibration_num, session_num = session_name.split('_')
@@ -86,34 +86,31 @@ class Experiment(Base):
                             session_date=Date.as_date(session_date),
                             session_dir=session_dir,
                             session_num=int(session_num.strip('T-MISNGDA'))).add_to_db()
-
-    @classmethod
-    def reinstate(cls, full_path):
-        experiments_data_frame = pd.read_csv(full_path, delimiter=',',
-                                             dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
-                                                    'session_re': str, 'folder_re': str, 'trial_re': str})
-        for index, experiment_row in experiments_data_frame.iterrows():
-            if cls.query.get(experiment_row["experiment_id"]) is None:
-                if experiment_row["experiment_type"] == 'skilled-reaching':
-                    DlxSkilledReaching(experiment_id=experiment_row["experiment_id"],
-                                       experiment_dir=experiment_row["experiment_dir"],
-                                       experiment_type=experiment_row["experiment_type"],
-                                       experiment_name=experiment_row["experiment_name"],
-                                       session_re=experiment_row["session_re"],
-                                       folder_re=experiment_row["folder_re"],
-                                       trial_re=experiment_row["trial_re"]).add_to_db()
-                elif experiment_row["experiment_type"] == 'grooming':
-                    DlxGrooming(experiment_id=experiment_row["experiment_id"],
-                                experiment_dir=experiment_row["experiment_dir"],
-                                experiment_type=experiment_row["experiment_type"],
-                                experiment_name=experiment_row["experiment_name"],
-                                session_re=experiment_row["session_re"]).add_to_db()
-                elif experiment_row["experiment_type"] == 'pasta-handling':
-                    DlxPastaHandling(experiment_id=experiment_row["experiment_id"],
-                                     experiment_dir=experiment_row["experiment_dir"],
-                                     experiment_type=experiment_row["experiment_type"],
-                                     experiment_name=experiment_row["experiment_name"],
-                                     session_re=experiment_row["session_re"]).add_to_db()
+    # TODO Fix this to reflect changes in experiment_type/experiment_name
+    # @classmethod
+    # def reinstate(cls, full_path):
+    #     experiments_data_frame = pd.read_csv(full_path, delimiter=',',
+    #                                          dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
+    #                                                 'session_re': str, 'folder_re': str, 'trial_re': str})
+    #     for index, experiment_row in experiments_data_frame.iterrows():
+    #         if cls.query.get(experiment_row["experiment_id"]) is None:
+    #             if experiment_row["experiment_type"] == 'skilled-reaching':
+    #                 DlxSkilledReaching(experiment_id=experiment_row["experiment_id"],
+    #                                    experiment_dir=experiment_row["experiment_dir"],
+    #                                    experiment_name=experiment_row["experiment_name"],
+    #                                    session_re=experiment_row["session_re"],
+    #                                    folder_re=experiment_row["folder_re"],
+    #                                    trial_re=experiment_row["trial_re"]).add_to_db()
+    #             elif experiment_row["experiment_type"] == 'grooming':
+    #                 DlxGrooming(experiment_id=experiment_row["experiment_id"],
+    #                             experiment_dir=experiment_row["experiment_dir"],
+    #                             experiment_name=experiment_row["experiment_name"],
+    #                             session_re=experiment_row["session_re"]).add_to_db()
+    #             elif experiment_row["experiment_type"] == 'pasta-handling':
+    #                 DlxPastaHandling(experiment_id=experiment_row["experiment_id"],
+    #                                  experiment_dir=experiment_row["experiment_dir"],
+    #                                  experiment_name=experiment_row["experiment_name"],
+    #                                  session_re=experiment_row["session_re"]).add_to_db()
 
 
 class DlxSkilledReaching(Experiment):
@@ -159,13 +156,14 @@ class DlxSkilledReaching(Experiment):
                 trial = Trial.query.filter_by(trial_dir=str(trial_dir)).first()
                 if trial is None:
                     trial_name = trial_dir.stem
+                    # TODO The trial_num are not getting saved, why?
                     trial_num = trial_name.split('_')[-1].strip('RTG')
                     Trial(experiment_id=self.experiment_id,
                           session_id=folder.session_id,
                           folder_id=folder.folder_id,
                           trial_dir=str(trial_dir),
                           trial_date=session.session_date,
-                          trial_num=int(trial_num[1:])).add_to_db()
+                          trial_num=int(trial_num)).add_to_db()
 
     def _update_trial_scores(self):
         for folder in self.folders:
@@ -326,7 +324,7 @@ class DYT1SkilledReaching(DlxSkilledReaching):
 
     def update(self):
         super()._update_sessions()
-        super()._update_folers()
+        super()._update_folders()
         super()._update_trials()
         self._update_trial_scores()
 
