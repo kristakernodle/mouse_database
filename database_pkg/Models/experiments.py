@@ -61,8 +61,10 @@ class Experiment(Base):
             print(f'Experiment directory does not exist: {self.experiment_dir}')
 
         # noinspection PyTypeChecker
+        # doesn't check self.participants is iterable
         for participant in self.participants:
 
+            # TODO I think this is the line where I'm going to have to start adjusting for Alli's experiment
             sessions_search_dir = Path(participant.participant_dir)
             if len(self.session_re.split('/')) > 1:
                 for item in self.session_re.split('/')[:-1]:
@@ -141,6 +143,7 @@ class DlxSkilledReaching(Experiment):
 
     def _update_folders(self):
         # noinspection PyTypeChecker
+        # doesn't check self.sessions for iterable
         for session in self.sessions:
             all_folders = Path(session.session_dir).glob(f'{self.folder_re}')
             for folder_dir in all_folders:
@@ -174,6 +177,7 @@ class DlxSkilledReaching(Experiment):
     def _update_trial_scores(self):
         for folder in self.folders:
             # noinspection PyTypeChecker
+            # doesn't check folder.score_folders is iterable
             for blind_folder in folder.score_folders:
                 reviewer = Reviewer.query.get(blind_folder.reviewer_id)
                 scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
@@ -273,6 +277,7 @@ class DYT1SkilledReaching(DlxSkilledReaching):
     def _update_trial_scores(self):
         for folder in self.folders:
             # noinspection PyTypeChecker
+            # doesn't check folder.score_folders is iterable
             for blind_folder in folder.score_folders:
                 reviewer = Reviewer.query.get(blind_folder.reviewer_id)
                 scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
@@ -333,6 +338,30 @@ class DYT1SkilledReaching(DlxSkilledReaching):
         super()._update_folders()
         super()._update_trials()
         self._update_trial_scores()
+
+
+class DlxChatSapSkilledReaching(DlxSkilledReaching):
+    __mapper_args__ = {'polymorphic_identity': 'dlxCKO-chatSap-skilled-reaching'}
+
+    def _update_sessions(self):
+        # TODO complete DlxChatSapSkilledReaching._update_sessions method
+        pass
+
+    def _update_folders(self):
+        # TODO complete DlxChatSapSkilledReaching._update_folders method
+        pass
+
+    def _update_trials(self):
+        # TODO complete DlxChatSapSkilledReaching._update_trials method
+        pass
+
+    def _update_trial_scores(self):
+        # TODO complete DlxChatSapSkilledReaching._update_trial_scores method
+        pass
+
+    def update(self):
+        # TODO complete DlxChatSapSkilledReaching.update method
+        pass
 
 
 class DlxGrooming(Experiment):
