@@ -366,21 +366,15 @@ class DlxChatSapSkilledReaching(DlxSkilledReaching):
                                    experiment_id=self.experiment_id, session_date=Date.as_date(yyyymmdd),
                                    session_dir=str(session), session_num=int(session_num.strip('T'))).add_to_db()
 
-    def _update_folders(self):
-        # TODO complete DlxChatSapSkilledReaching._update_folders method
-        pass
-
-    def _update_trials(self):
-        # TODO complete DlxChatSapSkilledReaching._update_trials method
-        pass
-
     def _update_trial_scores(self):
         # TODO complete DlxChatSapSkilledReaching._update_trial_scores method
         pass
 
     def update(self):
-        # TODO complete DlxChatSapSkilledReaching.update method
-        pass
+        self._update_sessions()
+        super()._update_folders()
+        super()._update_trials()
+        self._update_trial_scores()
 
 
 class DlxGrooming(Experiment):
