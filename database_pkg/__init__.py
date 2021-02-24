@@ -10,6 +10,7 @@ from .Models import (PastaHandlingScores,
                      BlindFolder,
                      Folder,
                      Session,
+                     ChatSapSession,
                      ParticipantDetail,
                      Reviewer,
                      Mouse,
@@ -17,7 +18,8 @@ from .Models import (PastaHandlingScores,
                      DlxSkilledReaching,
                      DlxGrooming,
                      DlxPastaHandling,
-                     DYT1SkilledReaching)
+                     DYT1SkilledReaching,
+                     DlxChatSapSkilledReaching,)
 from config import config
 from .blind_review import create_blind_folders
 

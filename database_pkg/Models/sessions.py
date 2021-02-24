@@ -21,6 +21,8 @@ class Session(Base):
     session_date = db.Column(db.Date, nullable=False)
     session_dir = db.Column(db.String, nullable=False, unique=True)
     session_num = db.Column(db.Integer, nullable=False)
+    poly_discrim = db.Column(db.String, nullable=True)
+    __mapper_args__ = {'polymorphic_on': poly_discrim}
 
     folders = relationship("Folder", backref="sessions")
     trials = relationship("Trial", backref="sessions")
@@ -41,18 +43,34 @@ class Session(Base):
         sessions_data_frame = read_csv(full_path,
                                        usecols=['session_id', 'mouse_id', 'experiment_id', 'session_date',
                                                 'session_dir',
-                                                'session_num'],
+                                                'session_num', 'experiment_phase', 'poly_discrim'],
                                        delimiter=',',
                                        dtype={'session_id': str, 'mouse_id': str, 'experiment_id': str,
-                                              'session_date': str, 'session_dir': str, 'session_num': int}
+                                              'session_date': str, 'session_dir': str, 'session_num': int,
+                                              'experiment_phase': str, 'poly_discrim': str}
                                        )
         sessions_data_frame.session_date = sessions_data_frame.session_date.apply(lambda x: parse_date(x))
         for index, session_row in sessions_data_frame.iterrows():
             if cls.query.get(session_row['session_id']) is None:
+                if session_row['poly_discrim'] == 'chat-sap':
+                    ChatSapSession(session_id=session_row['session_id'],
+                                   mouse_id=session_row['mouse_id'],
+                                   experiment_id=session_row['experiment_id'],
+                                   session_date=session_row['session_date'],
+                                   session_dir=session_row['session_dir'],
+                                   session_num=session_row['session_num'],
+                                   poly_discrim=session_row['poly_discrim'],
+                                   experiment_phase=session_row['experiment_phase'])
                 Session(session_id=session_row['session_id'],
                         mouse_id=session_row['mouse_id'],
                         experiment_id=session_row['experiment_id'],
                         session_date=session_row['session_date'],
                         session_dir=session_row['session_dir'],
-                        session_num=session_row['session_num']).add_to_db()
+                        session_num=session_row['session_num'],
+                        poly_discrim=session_row['poly_discrim']).add_to_db()
 
+
+class ChatSapSession(Session):
+    __mapper_args__ = {'polymorphic_identity': 'chat-sap'}
+
+    experiment_phase = db.Column(db.String, nullable=True)

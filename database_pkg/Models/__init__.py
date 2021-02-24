@@ -1,8 +1,13 @@
 from .mice import Mouse
 from .participant_details import ParticipantDetail
 from .reviewers import Reviewer
-from .experiments import DlxGrooming, Experiment, DlxSkilledReaching, DYT1SkilledReaching, DlxPastaHandling
-from .sessions import Session
+from .experiments import (DlxGrooming,
+                          Experiment,
+                          DlxSkilledReaching,
+                          DYT1SkilledReaching,
+                          DlxPastaHandling,
+                          DlxChatSapSkilledReaching, )
+from .sessions import Session, ChatSapSession
 
 from .SkilledReaching.blind_folders import BlindFolder
 from .SkilledReaching.blind_trials import BlindTrial

@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import exists, and_
 
 from .reviewers import Reviewer
-from .sessions import Session
+from .sessions import Session, ChatSapSession
 from .SkilledReaching import Folder, Trial, BlindFolder, BlindTrial, SRTrialScore
 from .Grooming import GroomingSummary, GroomingBout
 from .PastaHandling import PastaHandlingScores
@@ -343,9 +343,28 @@ class DYT1SkilledReaching(DlxSkilledReaching):
 class DlxChatSapSkilledReaching(DlxSkilledReaching):
     __mapper_args__ = {'polymorphic_identity': 'dlxCKO-chatSap-skilled-reaching'}
 
+    experiment_phase = db.Column(db.String, nullable=True)
+
     def _update_sessions(self):
-        # TODO complete DlxChatSapSkilledReaching._update_sessions method
-        pass
+        if not Path(self.experiment_dir).exists():
+            print(f'Experiment directory does not exist: {self.experiment_dir}')
+
+        # noinspection PyTypeChecker
+        # doesn't check self.participants is iterable
+        for participant in self.participants:
+
+            phases_search_dir = Path(participant.participant_dir)
+            all_phases = self.experiment_phase.split('|')
+            for phase in all_phases:
+                session_search_dir = phases_search_dir.joinpath(phase)
+                all_sessions_this_phase = list(session_search_dir.glob(self.session_re))
+
+                for session in all_sessions_this_phase:
+                    session_name = session.name
+                    _, yyyymmdd, session_num = session_name.split('_')
+                    ChatSapSession(experiment_phase=phase, mouse_id=participant.mouse_id,
+                                   experiment_id=self.experiment_id, session_date=Date.as_date(yyyymmdd),
+                                   session_dir=str(session), session_num=int(session_num.strip('T'))).add_to_db()
 
     def _update_folders(self):
         # TODO complete DlxChatSapSkilledReaching._update_folders method
