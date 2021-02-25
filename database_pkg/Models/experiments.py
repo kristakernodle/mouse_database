@@ -93,7 +93,8 @@ class Experiment(Base):
     def reinstate(cls, full_path):
         experiments_data_frame = pd.read_csv(full_path, delimiter=',',
                                              dtype={'experiment_id': str, 'experiment_dir': str, 'experiment_name': str,
-                                                    'session_re': str, 'folder_re': str, 'trial_re': str})
+                                                    'session_re': str, 'folder_re': str, 'trial_re': str,
+                                                    'experiment_phase': str})
         for index, experiment_row in experiments_data_frame.iterrows():
             if cls.query.get(experiment_row["experiment_id"]) is None:
                 if experiment_row["experiment_name"] == 'dlxCKO-skilled-reaching':
@@ -120,6 +121,14 @@ class Experiment(Base):
                                         session_re=experiment_row["session_re"],
                                         folder_re=experiment_row["folder_re"],
                                         trial_re=experiment_row["trial_re"]).add_to_db()
+                elif experiment_row["experiment_name"] == 'dlxCKO-chatSap-skilled-reaching':
+                    DlxChatSapSkilledReaching(experiment_id=experiment_row["experiment_id"],
+                                              experiment_dir=experiment_row["experiment_dir"],
+                                              experiment_name=experiment_row["experiment_name"],
+                                              session_re=experiment_row["session_re"],
+                                              folder_re=experiment_row["folder_re"],
+                                              trial_re=experiment_row["trial_re"],
+                                              experiment_phase=experiment_row["experiment_phase"]).add_to_db()
 
 
 class DlxSkilledReaching(Experiment):

@@ -1,5 +1,4 @@
 import uuid
-from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -22,7 +21,7 @@ class Session(Base):
     session_dir = db.Column(db.String, nullable=False, unique=True)
     session_num = db.Column(db.Integer, nullable=False)
     poly_discrim = db.Column(db.String, nullable=True)
-    __mapper_args__ = {'polymorphic_on': poly_discrim}
+    __mapper_args__ = {'polymorphic_identity': 'normal', 'polymorphic_on': poly_discrim}
 
     folders = relationship("Folder", backref="sessions")
     trials = relationship("Trial", backref="sessions")
@@ -67,7 +66,7 @@ class Session(Base):
                         session_date=session_row['session_date'],
                         session_dir=session_row['session_dir'],
                         session_num=session_row['session_num'],
-                        poly_discrim=session_row['poly_discrim']).add_to_db()
+                        poly_discrim='normal').add_to_db()
 
 
 class ChatSapSession(Session):
