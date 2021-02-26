@@ -64,7 +64,6 @@ class Experiment(Base):
         # doesn't check self.participants is iterable
         for participant in self.participants:
 
-            # TODO I think this is the line where I'm going to have to start adjusting for Alli's experiment
             sessions_search_dir = Path(participant.participant_dir)
             if len(self.session_re.split('/')) > 1:
                 for item in self.session_re.split('/')[:-1]:
