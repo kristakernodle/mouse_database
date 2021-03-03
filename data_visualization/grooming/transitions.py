@@ -3,9 +3,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-import database_pkg.Models.experiments
+import database_pkg
 from database_pkg import GroomingBout, GroomingSummary
-import database_pkg.Models.super_classes
+
 
 save_dir = '/Users/Krista/OneDrive - Umich/grooming'
 
@@ -75,6 +75,10 @@ bouts_sum.insert(bouts_sum.shape[1], 'Percent incomplete bouts',
 
 bouts_sum.insert(bouts_sum.shape[1], 'Percent interrupted bouts',
                  bouts_sum['bout_interrupted'] / bouts_sum['Number of bouts'] * 100)
+
+
+
+
 
 #   1. Average number of transitions per bout by genotype
 a_file_name = 'average_num_transitions_per_bout.jpeg'

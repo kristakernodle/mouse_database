@@ -138,7 +138,6 @@ class GroomingBout(Base):
 
     @classmethod
     def reinstate(cls, full_path):
-        # TODO grooming_bouts from back up file
         grooming_bout_df = read_csv(full_path,
                                     usecols=['grooming_bout_id', 'grooming_summary_id', 'session_id',
                                              'bout_string', 'bout_start', 'bout_end', 'interrupted', 'complete',
