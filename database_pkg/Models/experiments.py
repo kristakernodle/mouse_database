@@ -370,9 +370,11 @@ class DlxChatSapSkilledReaching(DlxSkilledReaching):
                 for session in all_sessions_this_phase:
                     session_name = session.name
                     _, yyyymmdd, session_num = session_name.split('_')
-                    ChatSapSession(experiment_phase=phase, mouse_id=participant.mouse_id,
-                                   experiment_id=self.experiment_id, session_date=Date.as_date(yyyymmdd),
-                                   session_dir=str(session), session_num=int(session_num.strip('T'))).add_to_db()
+                    chat_session = ChatSapSession.query.filter_by(session_dir=str(session)).first()
+                    if chat_session is None:
+                        ChatSapSession(experiment_phase=phase, mouse_id=participant.mouse_id,
+                                       experiment_id=self.experiment_id, session_date=Date.as_date(yyyymmdd),
+                                       session_dir=str(session), session_num=int(session_num.strip('T'))).add_to_db()
 
     def _update_trial_scores(self):
         # TODO complete DlxChatSapSkilledReaching._update_trial_scores method
