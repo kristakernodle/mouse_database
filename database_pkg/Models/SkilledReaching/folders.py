@@ -1,9 +1,11 @@
 import uuid
+from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pandas import read_csv
 
+from ..SkilledReaching.trials import Trial
 from ..SkilledReaching.blind_folders import BlindFolder
 from ..super_classes import Base
 from ...extensions import db
@@ -63,3 +65,17 @@ class Folder(Base):
                        folder_dir=folder_row['folder_dir'],
                        original_video=folder_row['original_video'],
                        trial_frame_number_file=folder_row['trial_frame_number_file']).add_to_db()
+
+    def add_trials_from_dir(self, experiment_trial_re, session):
+        all_trials = Path(self.folder_dir).glob(f'{experiment_trial_re}')
+        for trial_dir in all_trials:
+            trial = Trial.query.filter_by(trial_dir=str(trial_dir)).first()
+            if trial is None:
+                trial_name = trial_dir.stem
+                trial_num = trial_name.split('_')[-1].strip('RTG')
+                Trial(experiment_id=session.experiment_id,
+                      session_id=self.session_id,
+                      folder_id=self.folder_id,
+                      trial_dir=str(trial_dir),
+                      trial_date=session.session_date,
+                      trial_num=int(trial_num)).add_to_db()
