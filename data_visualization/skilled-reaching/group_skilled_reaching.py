@@ -1,8 +1,6 @@
 import pandas as pd
 
-import database_pkg as dbpkg
-import database_pkg.Models.mice
-import database_pkg.Models.sessions
+from database_pkg import Mouse, Experiment, Session
 from data_visualization.plot_functions import plot_success_rate, plot_trial_numbers, plot_reach_score_percent_heatmap
 
 
@@ -42,6 +40,7 @@ def plot_heatmap(df):
 
 
 if __name__ == '__main__':
+    experiment = Experiment.get_by_name('dlxCKO-skilled-reaching')
     all_scored_trials_full_path = '/Users/Krista/OneDrive - Umich/figures/all_scored_trials_df_20201203.csv'
     all_scored_trials = pd.read_csv(all_scored_trials_full_path,
                                     usecols=['eartag', 'genotype', 'birthdate', 'sex', 'session_num', 'session_date',
@@ -56,14 +55,13 @@ if __name__ == '__main__':
 
     reach_scores_by_eartag_by_session_list_dict = list()
     for session_dir, all_reach_score_counts in reach_scores_by_session_dir.iterrows():
-        session = database_pkg.Models.sessions.Session.query.filter(
-            database_pkg.Models.sessions.Session.session_dir == session_dir).first()
-        mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
+        session = Session.query.filter_by(experiment_id=experiment.experiment_id, session_dir=session_dir).first()
+        mouse = Mouse.query.get(session.mouse_id)
 
-        if mouse.genotype:
-            genotype = 'Knock-Out'
-        else:
+        if 'Control' in mouse.genotype:
             genotype = 'Control'
+        else:
+            genotype = 'Knock-Out'
 
         reach_scores_by_eartag_by_session_list_dict.append(
             {'eartag': mouse.eartag,
@@ -104,6 +102,29 @@ if __name__ == '__main__':
                                                  reach_scores_by_eartag_by_session_df['2']) * 100 /
                                                 reach_scores_by_eartag_by_session_df['Viable Trials'])
     reach_scores_by_eartag_by_session_df['Any Success'] = reach_scores_by_eartag_by_session_df['Any Success'].fillna(0)
+
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_1', (
+                reach_scores_by_eartag_by_session_df['1'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_2', (
+                reach_scores_by_eartag_by_session_df['2'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_3', (
+                reach_scores_by_eartag_by_session_df['3'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_4', (
+                reach_scores_by_eartag_by_session_df['4'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_5', (
+                reach_scores_by_eartag_by_session_df['5'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_8', (
+                reach_scores_by_eartag_by_session_df['8'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+    reach_scores_by_eartag_by_session_df.insert(reach_scores_by_eartag_by_session_df.shape[1], 'prop_9', (
+                reach_scores_by_eartag_by_session_df['9'] / reach_scores_by_eartag_by_session_df['Viable Trials']))
+
+    reach_scores_by_eartag_by_session_df['prop_1'] = reach_scores_by_eartag_by_session_df['prop_1'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_2'] = reach_scores_by_eartag_by_session_df['prop_2'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_3'] = reach_scores_by_eartag_by_session_df['prop_3'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_4'] = reach_scores_by_eartag_by_session_df['prop_4'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_5'] = reach_scores_by_eartag_by_session_df['prop_5'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_8'] = reach_scores_by_eartag_by_session_df['prop_8'].fillna(0)
+    reach_scores_by_eartag_by_session_df['prop_9'] = reach_scores_by_eartag_by_session_df['prop_9'].fillna(0)
 
     plot_success_rate("First Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
     plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')

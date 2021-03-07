@@ -2,10 +2,13 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
+from matpoltlib import cm
 import seaborn as sns
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
+blue_cmap = cm.get_cmap("winter")
+red_cmap = cm.get_cmap("Wistia")
 
 
 def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None,
@@ -180,3 +183,53 @@ def plot_trial_numbers(trial_type, data, eartag=None, genotype=None, save_dir='/
     plt.subplots_adjust(bottom=0.15, left=0.15)
     plt.savefig(str(Path(save_dir).joinpath(file_name)))
     plt.close(figure)
+
+if __name__ == '__main__':
+    sns.set_theme(context='paper', style="white")
+    figure, axis = plt.subplots(2, 2)
+
+    sns.lineplot(ax=axis[0][0], x="session_num", y="Any Success", hue='genotype', palette=palette,
+                 data=reach_scores_by_eartag_by_session_df, legend=False)
+    axis[0][0].set_ylim(0, 50)
+    axis[0][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    axis[0][0].set_yticks([0, 10, 20, 30, 40, 50])
+    axis[0][0].set(xlabel=None, ylabel='percent success')
+
+    sns.lineplot(ax=axis[0][1], x="session_num", y="Viable Trials", hue='genotype', palette=palette,
+                 data=reach_scores_by_eartag_by_session_df, legend=False)
+    axis[0][1].set_ylim(0, 150)
+    axis[0][1].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    axis[0][1].set_yticks([0, 50, 100, 150])
+    axis[0][1].set(xlabel=None, ylabel='number of trials')
+
+
+    # sns.lineplot(ax=axis[1][0], x="session_num", y="percent_trials", hue='reach_score', palette="Blues",
+    #              data=for_heatmap_df[for_heatmap_df.genotype == 'Control'], legend=False)
+    # axis[1][0].set_ylim(0, 100)
+    # axis[1][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    # axis[1][0].set_yticks([0, 20, 40, 60, 80, 100])
+    # axis[1][0].set(xlabel=None, ylabel='percent of trials')
+
+    # plt.stackplot(x='session_num', y1=for_heatmap_df[for_heatmap_df.genotype == 'Knock-Out', for_heatmap_df['reach_score'] == 4], data=for_heatmap_df[for_heatmap_df.genotype == 'Knock-Out'], legend=False)
+
+    ctrl_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Control']
+    ko_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Knock-Out']
+    mean_ko_reach_scores = ko_reach_scores.groupby('session_num').mean()
+    mean_ctrl_reach_scores = ctrl_reach_scores.groupby('session_num').mean()
+    mean_ko_reach_scores = mean_ko_reach_scores.reset_index()
+    mean_ctrl_reach_scores=mean_ctrl_reach_scores.reset_index()
+
+    mean_ctrl_reach_scores.plot.line(x="session_num", y=['prop_4', 'prop_5'], ax=axis[1][0], cmap=red_cmap)
+    axis[1][0].set_ylim(0, 1)
+    axis[1][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    axis[1][0].set_yticks([0, 1])
+    axis[1][0].set(xlabel=None, ylabel='proportion of trials')
+
+    mean_ko_reach_scores.plot.line(x="session_num", y=['prop_4', 'prop_5'],
+                                     ax=axis[1][1], cmap=blue_cmap)
+    axis[1][1].set_ylim(0, 1)
+    axis[1][1].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    axis[1][1].set_yticks([0, 1])
+    axis[1][1].set(xlabel=None, ylabel='proportion of trials')
+    plt.tight_layout()
+    plt.savefig('/Users/Krista/Desktop/figures/fig1.pdf')
