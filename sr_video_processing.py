@@ -10,6 +10,7 @@ import time
 import subprocess
 
 from database_pkg import (Experiment, Reviewer, Session, Folder, BlindFolder, )
+from database_pkg.blind_review import copy_blind_folder
 
 
 def file_num_dict(session_files):
@@ -185,13 +186,14 @@ def trim_video_to_trials(experiment, video_path, csv_path_obj):
 def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reaching', reviewer_name='Alli C', num_sessions=1):
     experiment = Experiment.get_by_name(experiment_name)
     first_name, last_name = reviewer_name.split(' ')
-    reviewer = Reviewer.query.filter_by(first_name=first_name, last_name=last_name)
+    reviewer = Reviewer.query.filter_by(first_name=first_name, last_name=last_name).first()
 
     # All sessions not blinded
     all_sessions_no_blind_folders = Session.query.filter(Session.experiment_id == experiment.experiment_id).filter(
         ~exists().where(and_(Session.session_id == Folder.session_id,
                              Folder.folder_id == BlindFolder.folder_id,
                              ))).all()
+
 
     sessions_to_process = sample(all_sessions_no_blind_folders, num_sessions)
 
@@ -203,6 +205,12 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
         all_csv = list(Path(session.session_dir).glob('*.csv'))
         session_csv = [item for item in all_csv if 'Scored' not in item.stem]
 
+        video_num_dict = file_num_dict(session_videos)
+        csv_num_dict = file_num_dict(session_csv)
+        folder_num_dict = file_num_dict(session_folders)
+        combined_num_dict = {x: (video_num_dict.get(x), csv_num_dict.get(x), folder_num_dict.get(x))
+                             for x in set(video_num_dict).union(csv_num_dict).union(folder_num_dict)}
+
         nonzero_session_folders = (len(session.folders) > 0)
         session_folder_for_each_video = (len(session_folders) == len(session_videos))
         session_csv_for_each_video = (len(session_csv) == len(session_videos))
@@ -211,6 +219,8 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
 
         if ('MISSINGDATA' in session.session_dir):
             continue
+
+
         elif (not nonzero_session_folders) and session_folder_for_each_video:
             # These folders need to be added to the database
             experiment._update_folders()
@@ -221,7 +231,10 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
             # These videos need to be downloaded from the cloud OR the sharedx drive is not connected
             case = 0
         elif (not session_csv_for_each_video) and len(session_videos) > 0:
-            # These videos need to have LED detection performed
+            # (some of) these videos need to have LED detection performed
+
+
+
             for video_path in session_videos:
                 csv_path = video_path.parent.joinpath(f"{video_path.stem}.csv")
                 if csv_path in session_csv:
@@ -231,23 +244,28 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                     csv_num_dict = file_num_dict(session_csv)
                     folder_num_dict = file_num_dict(session_folders)
 
-                    combined_num_dict = {x: (csv_num_dict.get(x), folder_num_dict.get(x))
-                                         for x in set(csv_num_dict).union(folder_num_dict)}
+                    combined_num_dict = {x: (video_num_dict.get(x), csv_num_dict.get(x), folder_num_dict.get(x))
+                                         for x in set(video_num_dict).union(csv_num_dict).union(folder_num_dict)}
 
                     for video_num, paths in combined_num_dict.items():
+                        csv_path, folder_path = paths
                         if None in paths or len(list(paths[1].glob('*'))) == 0:
                             success = trim_video_to_trials(experiment, video_path, paths[0])
                             if success:
-                                folder = Folder.query.filter_by(folder_dir=str(paths[0])).first()
+                                folder = Folder.query.filter_by(original_video=str(video_path)).first()
                                 if folder is None:
                                     Folder(session_id=session.session_id,
-                                           folder_dir=str(paths[0]),
+                                           folder_dir=str(folder_path),
                                            original_video=str(video_path),
                                            trial_frame_number_file=str(csv_path)).add_to_db()
-                                    folder = Folder.query.filter_by(folder_dir=str(paths[0])).first()
+                                    folder = Folder.query.filter_by(folder_dir=str(folder_path)).first()
                                 folder.add_trials_from_dir(experiment.trial_re, session)
+                                folder.create_blind_folder(reviewer)
+                                blind_folder = folder.create_blind_folder(reviewer)
+                                copy_blind_folder(reviewer, blind_folder)
                             else:
                                 print('what vid chopping did not work')
+                    continue
 
                 csv_path = LEDDetection(video_path)
                 _, _, video_number = video_path.stem.split('_')
@@ -263,6 +281,8 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                                trial_frame_number_file=str(csv_path)).add_to_db()
                         folder = Folder.query.filter_by(folder_dir=str(folder_path)).first()
                     folder.add_trials_from_dir(experiment.trial_re, session)
+                    blind_folder = folder.create_blind_folder(reviewer)
+                    copy_blind_folder(reviewer, blind_folder)
                 else:
                     print('what vid chopping did not work')
 

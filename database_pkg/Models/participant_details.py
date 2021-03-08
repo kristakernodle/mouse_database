@@ -39,8 +39,7 @@ class ParticipantDetail(Base):
                                              delimiter=',',
                                              dtype={'detail_id': str, 'mouse_id': str, 'experiment_id': str,
                                                     'start_date': str,
-                                                    'end_date': str, 'participant_dir': str, 'exp_spec_details': str},
-                                             nrows=38)
+                                                    'end_date': str, 'participant_dir': str, 'exp_spec_details': str})
         participant_details_df.start_date = participant_details_df.start_date.apply(lambda x: parse_date(x))
         participant_details_df.end_date = participant_details_df.end_date.apply(lambda x: parse_date(x))
 
