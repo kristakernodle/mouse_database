@@ -260,7 +260,7 @@ class DlxSkilledReaching(Experiment):
                 else:
                     print(f"Not Scored: {str(scored_blind_folder_path)}")
 
-    def update(self):
+    def update_from_dirs(self):
         self._update_sessions()
         self._update_folers()
         self._update_trials()
@@ -341,7 +341,7 @@ class DYT1SkilledReaching(DlxSkilledReaching):
                 else:
                     print(f"Not Scored: {str(scored_blind_folder_path)}")
 
-    def update(self):
+    def update_from_dirs(self):
         super()._update_sessions()
         super()._update_folders()
         super()._update_trials()
@@ -380,7 +380,7 @@ class DlxChatSapSkilledReaching(DlxSkilledReaching):
         # TODO complete DlxChatSapSkilledReaching._update_trial_scores method
         pass
 
-    def update(self):
+    def update_from_dirs(self):
         self._update_sessions()
         super()._update_folders()
         super()._update_trials()
@@ -510,7 +510,7 @@ class DlxGrooming(Experiment):
                                  bout_start=int(bout_start_frame),
                                  bout_end=int(bout_end_frame)).add_to_db()
 
-    def update(self):
+    def update_from_dirs(self):
         self._update_sessions()
         self._update_grooming_summary()
         self._update_grooming_bouts_and_chains()
@@ -574,6 +574,6 @@ class DlxPastaHandling(Experiment):
                                     guide_around_grasp=boolean_values["Guide Around Grasp"],
                                     angling_with_head_tilt=boolean_values["Angling with Head Tilt"]).add_to_db()
 
-    def update(self):
+    def update_from_dirs(self):
         self._update_sessions()
         self._update_pasta_handling_scores()

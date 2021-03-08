@@ -4,18 +4,18 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import scipy.stats
 
-import database_pkg
+from database_pkg import Experiment, Session, Mouse
 
 save_dir = '/Users/Krista/OneDrive - Umich/grooming'
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 
-experiment = database_pkg.Models.experiments.Experiment.query.filter_by(experiment_name="dlxCKO-grooming").first()
+experiment = Experiment.query.filter_by(experiment_name="dlxCKO-grooming").first()
 
 grooming_summary_data = list()
 for grooming_summary in experiment.scored_grooming:
-    session = database_pkg.Models.sessions.Session.query.get(grooming_summary.session_id)
-    mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
+    session = Session.query.get(grooming_summary.session_id)
+    mouse = Mouse.query.get(session.mouse_id)
 
     new_row = {'eartag': mouse.eartag,
                'genotype': mouse.genotype,

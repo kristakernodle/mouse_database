@@ -180,3 +180,7 @@ class GroomingBout(Base):
                              reversed_transitions=grooming_bout_row['reversed_transitions'],
                              initiation_incorrect_transitions=grooming_bout_row[
                                  'initiation_incorrect_transitions']).add_to_db()
+
+    @classmethod
+    def update_from_dirs(cls):
+        pass
