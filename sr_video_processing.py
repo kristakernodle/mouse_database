@@ -44,7 +44,7 @@ def isFirstFrame(frame_number, cap, secs, first_frame):
     # This function identifies the first frame in the video where an LED is on
     # Note: Assumtion is made that the frame rate is >= 59 fps
 
-    testFrame = np.floor(frame_number - (60 * secs))
+    testFrame = np.ceil(frame_number - (60 * secs))
     value = LED(cap, testFrame)
     value_thresh = 9000
     if value > value_thresh and secs == 5:
@@ -84,6 +84,7 @@ def LEDDetection(video_path):
 
     vid_frames = []
     value_thresh = 9000
+    base_increment = 1400
     while frame_num < frame_count:
         value = LED(cap, frame_num)
         if value > value_thresh:
@@ -99,12 +100,17 @@ def LEDDetection(video_path):
 
             while first_frame is False:
                 [first_frame, frame_num, secs] = isFirstFrame(frame_num, cap, secs, first_frame)
+                if len(vid_frames) > 0 and frame_num == vid_frames[-1]['frame']:
+                    break
 
-            trial_num += 1
-            vid_frames.append({'trial': trial_num,
-                               'frame': frame_num})
-
-            frame_num = frame_num + 1400
+            if len(vid_frames) > 0 and frame_num == vid_frames[-1]['frame']:
+                base_increment += 100
+                frame_num = frame_num + base_increment
+            else:
+                trial_num += 1
+                vid_frames.append({'trial': trial_num,
+                                   'frame': frame_num})
+                frame_num = frame_num + base_increment
 
         else:
             frame_num = frame_num + 300
@@ -137,9 +143,13 @@ def trim_video_to_trials(experiment, video_path, csv_path_obj):
     total_number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
 
-    trial_frames = pd.read_csv(csv_path_obj,
-                               usecols=['trial', 'frame'],
-                               dtype={'trial': int, 'frame': int})
+    try:
+        trial_frames = pd.read_csv(csv_path_obj,
+                                   usecols=['trial', 'frame'],
+                                   dtype={'trial': int, 'frame': int})
+    except ValueError:
+        trial_frames = pd.read_csv(csv_path_obj)
+        trial_frames.trials = trial_frames.index + 1
 
     # Loop through each trial to cut into short trial videos
     for idx, trial_info in trial_frames.iterrows():
@@ -156,6 +166,9 @@ def trim_video_to_trials(experiment, video_path, csv_path_obj):
             end_frame = frame_number + 1080
 
         trial_path = folder_path.joinpath(f"{csv_path_obj.stem}_R{trial_number}.mp4")
+
+        if trial_path.exists():
+            continue
 
         os.chdir(trial_path.parent)
 
@@ -195,7 +208,7 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
 
     sessions_to_process = sample(all_sessions_no_blind_folders, num_sessions)
 
-    for session in all_sessions_no_blind_folders:
+    for session in experiment.sessions:
 
         if 'MISSINGDATA' in session.session_dir:
             continue
@@ -213,7 +226,10 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                              for x in set(video_num_dict).union(csv_num_dict).union(folder_num_dict)}
 
         for file_num in combined_num_dict.keys():
-            video_path, folder_path, csv_path = combined_num_dict[file_num]
+            video_path = None
+            folder_path = None
+            csv_path = None
+            video_path,  csv_path, folder_path = combined_num_dict[file_num]
 
             # CASE DOES NOT EXIST
             #   video_path is None,       folder_path is None,        csv_path is None
@@ -235,6 +251,7 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                 print(f'download {session.session_dir}')
                 continue
             elif video_path is not None and folder_path is None and csv_path is not None:
+                print(f'Trimming Video: {video_path}')
 
                 # Cut video into trials
                 success = trim_video_to_trials(experiment, video_path, csv_path)
@@ -251,14 +268,19 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                     folder.add_trials_from_dir(experiment.trial_re, session)
 
                     # Create a blind folder
+
                     blind_folder = folder.create_blind_folder(reviewer)
+                    print(f'Copying blind folder: {blind_folder.blind_name}')
                     copy_blind_folder(reviewer, blind_folder)
                     continue
                 else:
                     print('what vid chopping did not work')
             elif video_path is not None and csv_path is None:
+                print(f'LED Detection: {video_path}')
                 # perform LED detection
                 csv_path = LEDDetection(video_path)
+
+                print(f'Trimming Video: {video_path}')
                 success = trim_video_to_trials(experiment, video_path, csv_path)
 
                 folder_path = csv_path.parent.joinpath(experiment.folder_re.replace('*', file_num))
@@ -275,6 +297,7 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
 
                     # Create a blind folder
                     blind_folder = folder.create_blind_folder(reviewer)
+                    print(f'Copying blind folder: {blind_folder.blind_name}')
                     copy_blind_folder(reviewer, blind_folder)
                     continue
                 else:
@@ -289,19 +312,16 @@ def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reachin
                     folder = Folder.query.filter_by(folder_dir=str(folder_path)).first()
                     folder.add_trials_from_dir(experiment.trial_re, session)
 
-                    # Create a blind folder
-                    blind_folder = folder.create_blind_folder(reviewer)
-                    copy_blind_folder(reviewer, blind_folder)
-
                 blind_folder = BlindFolder.query.filter_by(folder_id=folder.folder_id, reviewer_id=reviewer.reviewer_id).first()
                 if blind_folder is None:
                     # Create a blind folder
                     blind_folder = folder.create_blind_folder(reviewer)
-                    copy_blind_folder(reviewer, blind_folder)
                 elif Path(reviewer.toScore_dir).joinpath(blind_folder.blind_name).exists() \
                         or Path(reviewer.scored_dir).joinpath(
                             f'{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv').exists():
                     continue
+                print(f'Copying blind folder: {blind_folder.blind_name}')
+                copy_blind_folder(reviewer, blind_folder)
 
 
 if __name__ == '__main__':
