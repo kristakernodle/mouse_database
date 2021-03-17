@@ -194,21 +194,24 @@ def trim_video_to_trials(experiment, video_path, csv_path_obj):
     return True
 
 
-def blind_review_full_processing(experiment_name='dlxCKO-chatSap-skilled-reaching', reviewer_name='Alli C', num_sessions=1):
+def blind_review_full_processing(experiment_name='dlxCKO-skilled-reaching', reviewer_name='Krista K', num_sessions=1):
     experiment = Experiment.get_by_name(experiment_name)
     first_name, last_name = reviewer_name.split(' ')
     reviewer = Reviewer.query.filter_by(first_name=first_name, last_name=last_name).first()
 
-    # All sessions not blinded
-    all_sessions_no_blind_folders = Session.query.filter(Session.experiment_id == experiment.experiment_id).filter(
-        ~exists().where(and_(Session.session_id == Folder.session_id,
-                             Folder.folder_id == BlindFolder.folder_id,
-                             ))).all()
+    # All folders not blinded
+    all_folders_not_blinded = Folder.query \
+        .join(Session, Folder.session_id == Session.session_id) \
+        .filter(Session.experiment_id == experiment.experiment_id) \
+        .filter(~exists()
+                .where(and_(Folder.folder_id == BlindFolder.folder_id))) \
+        .all()
 
+    sessions_to_check = list()
+    for folder in all_folders_not_blinded:
+        sessions_to_check.append(Session.query.get(folder.session_id))
 
-    sessions_to_process = sample(all_sessions_no_blind_folders, num_sessions)
-
-    for session in experiment.sessions:
+    for session in sessions_to_check:
 
         if 'MISSINGDATA' in session.session_dir:
             continue
