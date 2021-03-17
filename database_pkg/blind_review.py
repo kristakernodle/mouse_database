@@ -34,7 +34,7 @@ def create_blind_folders(experiment_name, reviewer_name, num_files=1):
         .join(Session, Folder.session_id == Session.session_id)\
         .filter(Session.experiment_id == experiment.experiment_id)\
         .filter(~exists()
-                .where(and_(Folder.folder_id == BlindFolder.folder_id, Folder.session_id == Session.session_id)))\
+                .where(and_(Folder.folder_id == BlindFolder.folder_id)))\
         .all()
 
     # Select Folders to blind

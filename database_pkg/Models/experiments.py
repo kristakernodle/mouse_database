@@ -188,93 +188,133 @@ class DlxSkilledReaching(Experiment):
             # doesn't check folder.score_folders is iterable
             for blind_folder in folder.score_folders:
                 reviewer = Reviewer.query.get(blind_folder.reviewer_id)
-                scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
-                    f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
 
-                if scored_blind_folder_path.exists():
-                    try:
-                        all_blind_folder_scores = pd.read_csv(
-                            scored_blind_folder_path,
-                            usecols=['Trial', 'Score', 'Movement', 'DlxGrooming'],
-                            delimiter=',',
-                            dtype={'Trial': float, 'Score': float, 'Movement': str, 'DlxGrooming': str}
-                        )
-                    except (ParserError, ValueError):
-                        print(f"Reformat file {scored_blind_folder_path}")
-                        shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
-                        continue
-
-                    for index, scored_row in all_blind_folder_scores.iterrows():
-                        if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
-                            continue
-
-                        blind_trial = BlindTrial.query.filter_by(blind_folder_id=blind_folder.blind_folder_id,
-                                                                 blind_trial_num=int(scored_row['Trial'])).first()
-
-                        if blind_trial is None:
-                            blind_trial_num = int(scored_row['Trial'])
-                            trial = Trial.query.filter_by(folder_id=folder.folder_id, trial_num=blind_trial_num).first()
-                            if trial is None:
-                                print('Trial is none?')
-                                continue
-                            blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
-                                                     reviewer_id=reviewer.reviewer_id,
-                                                     trial_id=trial.trial_id,
-                                                     folder_id=folder.folder_id,
-                                                     blind_trial_num=blind_trial_num)
-                            blind_trial.add_to_db()
-
-                        if scored_row['Movement'] == '1':
-                            movt = True
-                        else:
-                            movt = False
-
-                        if scored_row['Grooming'] == '1':
-                            groom = True
-                        elif scored_row['Grooming'] == '0':
-                            groom = False
-                        else:
-                            groom = None
-
-                        trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id,
-                                                                   reviewer_id=reviewer.reviewer_id).first()
-
-                        if trial_score is None:
-                            if groom is None:
-                                print('I guess we have to figure this out now')
-                            SRTrialScore(trial_id=blind_trial.trial_id,
-                                         reviewer_id=blind_trial.reviewer_id,
-                                         reach_score=int(scored_row['Score']),
-                                         abnormal_movt_score=movt,
-                                         grooming_score=groom).add_to_db()
-                        elif all([trial_score.reach_score == int(scored_row['Score']),
-                                  trial_score.abnormal_movt_score == movt,
-                                  trial_score.grooming_score == groom]):
-                            continue
-                        else:
-                            trial_score.reach_score = int(scored_row['Score'])
-                            trial_score.abnormal_movt_score = movt
-                            trial_score.grooming_score = groom
-                            trial_score.add_to_db()
+                if all([item is not None for item in
+                        [SRTrialScore.query.filter_by(
+                            trial_id=blind_trial.trial_id,
+                            reviewer_id=reviewer.reviewer_id).first()
+                         for blind_trial in blind_folder.blind_trials]]):
+                    continue
 
                 else:
-                    print(f"Not Scored: {str(scored_blind_folder_path)}")
+
+                    scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
+                        f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+
+                    if scored_blind_folder_path.exists():
+                        try:
+                            all_blind_folder_scores = pd.read_csv(
+                                scored_blind_folder_path,
+                                usecols=['Trial', 'Score', 'Movement', 'Grooming'],
+                                delimiter=',',
+                                dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                            )
+                        except ValueError:
+                            try:
+                                all_blind_folder_scores = pd.read_csv(
+                                    scored_blind_folder_path,
+                                    usecols=['Trial', 'Score', 'Movement', 'Grooming '],
+                                    delimiter=',',
+                                    dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming ': str}
+                                )
+                                all_blind_folder_scores['Grooming'] = all_blind_folder_scores['Grooming ']
+                            except ValueError:
+                                try:
+                                    all_blind_folder_scores = pd.read_csv(
+                                        scored_blind_folder_path,
+                                        usecols=['Trial ', 'Score', 'Movement', 'Grooming'],
+                                        delimiter=',',
+                                        dtype={'Trial ': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                                    )
+                                    all_blind_folder_scores['Trial'] = all_blind_folder_scores['Trial ']
+                                except ValueError:
+                                    print(f"For god's sake, reformat file {scored_blind_folder_path}")
+                        except (ParserError, ValueError):
+                            print(f"Reformat file {scored_blind_folder_path}")
+                            shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
+                            continue
+
+                        for index, scored_row in all_blind_folder_scores.iterrows():
+
+                            if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
+                                continue
+
+                            blind_trial = BlindTrial.query.filter_by(blind_folder_id=blind_folder.blind_folder_id,
+                                                                     reviewer_id=reviewer.reviewer_id,
+                                                                     blind_trial_num=int(scored_row['Trial'])).first()
+
+                            if blind_trial is None:
+                                blind_trial_num = int(scored_row['Trial'])
+                                trial = Trial.query.filter_by(folder_id=folder.folder_id,
+                                                              trial_num=blind_trial_num).first()
+                                if trial is None:
+                                    print('Trial is none?')
+                                    continue
+                                blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                                         reviewer_id=reviewer.reviewer_id,
+                                                         trial_id=trial.trial_id,
+                                                         folder_id=folder.folder_id,
+                                                         blind_trial_num=blind_trial_num)
+                                blind_trial.add_to_db()
+
+                            if scored_row['Movement'] == '1':
+                                movt = True
+                            elif scored_row['Movement'] == '0':
+                                movt = False
+                            else:
+                                movt = None
+
+                            if scored_row['Grooming'] == '1':
+                                groom = True
+                            elif scored_row['Grooming'] == '0':
+                                groom = False
+                            else:
+                                groom = None
+
+                            trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id).filter_by(
+                                                                       reviewer_id=reviewer.reviewer_id).first()
+
+                            if trial_score is None:
+                                if groom is None:
+                                    print('I guess we have to figure this out now')
+                                SRTrialScore(trial_id=blind_trial.trial_id,
+                                             reviewer_id=blind_trial.reviewer_id,
+                                             reach_score=int(scored_row['Score']),
+                                             abnormal_movt_score=movt,
+                                             grooming_score=groom).add_to_db()
+                            elif all([trial_score.reach_score == int(scored_row['Score']),
+                                      trial_score.abnormal_movt_score == movt,
+                                      trial_score.grooming_score == groom]):
+                                continue
+                            else:
+                                trial_score.reach_score = int(scored_row['Score'])
+                                trial_score.abnormal_movt_score = movt
+                                trial_score.grooming_score = groom
+                                trial_score.add_to_db()
+
+                    else:
+                        print(f"Not Scored: {str(scored_blind_folder_path)}")
 
     def update_from_dirs(self):
         self._update_sessions()
-        self._update_folers()
+        self._update_folders()
         self._update_trials()
         self._update_trial_scores()
 
     def status_report(self):
-        all_folders_not_blinded = Folder.query.filter(
-            ~exists().where(and_(Folder.folder_id == BlindFolder.folder_id,
-                                 Folder.session_id == Session.session_id,
-                                 Session.experiment_id == self.experiment_id))).all()
-        all_blind_folders_not_scored = BlindFolder.query.filter(
-            ~exists().where(and_(BlindFolder.folder_id == Trial.folder_id,
-                                 Trial.experiment_id == self.experiment_id,
-                                 Trial.trial_id == SRTrialScore.trial_id))).all()
+        all_folders_not_blinded = Folder.query\
+            .join(Session, Folder.session_id == Session.session_id)\
+            .filter(Session.experiment_id == self.experiment_id)\
+            .filter(~exists()
+                    .where(and_(Folder.folder_id == BlindFolder.folder_id)))\
+            .all()
+        all_blind_folders_not_scored = BlindFolder.query\
+            .join(Folder, BlindFolder.folder_id == Folder.folder_id)\
+            .join(Session, Folder.session_id == Session.session_id)\
+            .filter(Session.experiment_id == self.experiment_id)\
+            .filter(~exists()
+                    .where(and_(BlindFolder.folder_id == Trial.folder_id,
+                                Trial.trial_id == SRTrialScore.trial_id))).all()
         print(f"Number Folders Not Blinded: {len(all_folders_not_blinded)}\n"
               f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n")
 
