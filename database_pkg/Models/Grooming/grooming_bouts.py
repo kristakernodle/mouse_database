@@ -5,7 +5,7 @@ from pandas import read_csv
 
 from ..super_classes import Base
 from ...extensions import db
-from ...utilities import convert_dict_keys_to_str
+from ...utilities import convert_dict_keys_to_str, merge_dicts
 
 
 class GroomingBout(Base):
@@ -63,12 +63,14 @@ class GroomingBout(Base):
                 self.interrupted = True
 
             # Perform transition analysis of self.bout_string
-            correct_transitions = {(0, 1): 0,
-                                   (1, 2): 0,
-                                   (2, 3): 0,
-                                   (3, 4): 0,
-                                   (4, 5): 0,
-                                   (5, 0): 0}
+            all_correct_transitions = {(0, 1): 0,
+                                             (1, 2): 0,
+                                            (2, 3): 0,
+                                            (3, 4): 0}
+            any_correct_transitions = {(4, 0): 0,
+                                       (5, 0): 0}
+            other_correct_transitions = {(4, 5): 0}
+
             aborted_transitions = dict()
             skipped_transitions = dict()
             reversed_transitions = dict()
@@ -79,14 +81,19 @@ class GroomingBout(Base):
                 breakpoint()
             bout_transition_tup = tuple([(bout_tup[idx], bout_tup[idx + 1]) for idx in range(len(bout_tup) - 1)])
             for transition in bout_transition_tup:
-                if transition in correct_transitions.keys():
+                if transition in all_correct_transitions.keys():
                     # Correct transitions
-                    correct_transitions[transition] = correct_transitions.get(transition, 0) + 1
+                    all_correct_transitions[transition] = all_correct_transitions.get(transition, 0) + 1
+                elif transition in any_correct_transitions.keys():
+                    # Correct transitions
+                    any_correct_transitions[transition] = any_correct_transitions.get(transition, 0) + 1
+                elif transition in other_correct_transitions.keys():
+                    other_correct_transitions[transition] = other_correct_transitions.get(transition, 0) + 1
                 elif transition in list(zip([0] * 4, range(2, 6))):
                     # Transitions with incorrect initiation
                     initiation_incorrect_transitions[transition] = initiation_incorrect_transitions.get(transition,
                                                                                                         0) + 1
-                elif transition in list(zip(range(1, 5), [0] * 4)):
+                elif transition in list(zip(range(1, 4), [0] * 3)):
                     # Aborted transitions (premature termination)
                     aborted_transitions[transition] = aborted_transitions.get(transition, 0) + 1
                 elif (transition[0] - transition[1]) > 0:
@@ -101,8 +108,13 @@ class GroomingBout(Base):
                 else:
                     breakpoint()
 
+            correct_transitions = merge_dicts(all_correct_transitions,
+                                              any_correct_transitions,
+                                              other_correct_transitions)
+
             # Set all values related to transitions
-            self.complete = all([item != 0 for item in correct_transitions.values()])
+            self.complete = (all([item != 0 for item in all_correct_transitions.values()])
+                             and any([item != 0 for item in any_correct_transitions.values()]))
             self.num_incorrect_transitions = len(initiation_incorrect_transitions) + len(aborted_transitions) + \
                                              len(reversed_transitions) + len(skipped_transitions)
             self.total_num_transitions = self.num_incorrect_transitions + sum(correct_transitions.values())

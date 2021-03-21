@@ -2,13 +2,22 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from matpoltlib import cm
+from matplotlib.colors import ListedColormap
 import seaborn as sns
+import pandas as pd
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
-blue_cmap = cm.get_cmap("winter")
-red_cmap = cm.get_cmap("Wistia")
+ctrl_miss_palette = {'contact miss': 'b',
+                     'no contact miss': 'mediumturquoise'}
+ko_miss_palette = ctrl_miss_palette
+# ko_miss_palette = {'contact miss': '#ff0000',
+#                    'no contact miss': '#990000'}
+
+cap_size = 2
+
+blue_cmap = ListedColormap(['#0080ff', '#00407f'])
+red_cmap = ListedColormap(['#ff0000', '#990000'])
 
 
 def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None,
@@ -184,33 +193,119 @@ def plot_trial_numbers(trial_type, data, eartag=None, genotype=None, save_dir='/
     plt.savefig(str(Path(save_dir).joinpath(file_name)))
     plt.close(figure)
 
-if __name__ == '__main__':
+
+def plot_figure1(reach_scores_by_eartag_by_session_df):
+
+    def convert_reach_scores_df_proportion_df(genotype_reach_scores):
+        proportion_list = list()
+        for index, row in genotype_reach_scores.iterrows():
+            row_dict = {'eartag': row.eartag,
+                        'genotype': row.genotype,
+                        'birthdate': row.birthdate,
+                        'sex': row.sex,
+                        'session_num': row.session_num}
+
+            proportions = {'contact miss': row.prop_4,
+                           'no contact miss': row.prop_5}
+
+            for key in proportions.keys():
+                this_row = dict(**row_dict,
+                                **{'miss_type': key,
+                                   'value': proportions[key]}
+                                )
+                proportion_list.append(this_row)
+        return pd.DataFrame.from_records(proportion_list)
+
+    ctrl_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Control']
+    ko_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Knock-Out']
+
+    ctrl_proportion_df = convert_reach_scores_df_proportion_df(ctrl_reach_scores)
+    ko_proportion_df = convert_reach_scores_df_proportion_df(ko_reach_scores)
+
     sns.set_theme(context='paper', style="white")
-    figure, axis = plt.subplots(2, 2)
+    figure = plt.figure()
+    figure.dpi = 300
+    figure.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
 
-    sns.lineplot(ax=axis[0][0], x="session_num", y="Any Success", hue='genotype', palette=palette,
+    ax1 = plt.subplot2grid((3, 2), (0, 0))
+    ax2 = plt.subplot2grid((3, 2), (0, 1))
+    ax3 = plt.subplot2grid((3, 2), (1, 0))
+    ax4 = plt.subplot2grid((3, 2), (1, 1))
+    ax5 = plt.subplot2grid((3, 2), (2, 0), colspan=2)
+
+    # ax1.imshow(plt.imread('/Users/Krista/OneDrive - Umich/figures/figures_ai/skilled-reaching-box.png'))
+    ax1.axis("off")
+    ax5.axis("off")
+
+    sns.lineplot(ax=ax2, x="session_num", y="Any Success",
+                 hue='genotype', hue_order=["Control", "Knock-Out"], palette=palette,
+                 data=reach_scores_by_eartag_by_session_df, legend=True,
+                 markers='o',
+                 errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
+    ax2.set_ylim(0, 50)
+    ax2.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax2.set_yticks([0, 10, 20, 30, 40, 50])
+    ax2.get_legend().set_title(None)
+    ax2.set(xlabel=None, ylabel='percent success')
+
+    sns.lineplot(ax=ax3, x="session_num", y="value",
+                 hue='miss_type', palette=ctrl_miss_palette,
+                 data=ctrl_proportion_df, legend=True,
+                 errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
+    ax3.set_ylim(0, 1)
+    ax3.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax3.set_yticks([0, 1])
+    ax3.set(title='control', xlabel=None, ylabel='proportion of trials')
+    ax3.legend().remove()
+
+    sns.lineplot(ax=ax4, x="session_num", y="value",
+                 hue='miss_type', palette=ko_miss_palette,
+                 data=ko_proportion_df, legend=True,
+                 errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
+    ax4.set_ylim(0, 1)
+    ax4.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax4.set_yticks([0, 1])
+    ax4.set(title='knock-out', xlabel=None, ylabel='proportion of trials')
+    handles, labels = ax4.get_legend_handles_labels()
+    ax4.legend().remove()
+
+    figure.legend(handles=handles,
+                  labels=labels,
+                  loc="lower right",
+                  title="Miss Type")
+    plt.tight_layout()
+    plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/fig1.pdf')
+
+def plot_figure1_draft1(reach_scores_by_eartag_by_session_df):
+
+    sns.set_theme(context='paper', style="white")
+
+    figure = plt.figure()
+
+    figure.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+
+    ax1 = plt.subplot2grid((3, 2), (0, 0), colspan=2)
+    ax2 = plt.subplot2grid((3, 2), (1, 0))
+    ax3 = plt.subplot2grid((3, 2), (1, 1))
+    ax4 = plt.subplot2grid((3, 2), (2, 0))
+    ax5 = plt.subplot2grid((3, 2), (2, 1))
+
+    ax1.imshow(plt.imread('/Users/Krista/OneDrive - Umich/figures/figures_ai/skilled-reaching-box.png'))
+    ax1.axis("off")
+
+    sns.lineplot(ax=ax2, x="session_num", y="Any Success", hue='genotype', palette=palette,
                  data=reach_scores_by_eartag_by_session_df, legend=False)
-    axis[0][0].set_ylim(0, 50)
-    axis[0][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    axis[0][0].set_yticks([0, 10, 20, 30, 40, 50])
-    axis[0][0].set(xlabel=None, ylabel='percent success')
+    ax2.set_ylim(0, 50)
+    ax2.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax2.set_yticks([0, 10, 20, 30, 40, 50])
+    ax2.set(xlabel=None, ylabel='percent success')
 
-    sns.lineplot(ax=axis[0][1], x="session_num", y="Viable Trials", hue='genotype', palette=palette,
+    sns.lineplot(ax=ax3, x="session_num", y="Viable Trials", hue='genotype', palette=palette,
                  data=reach_scores_by_eartag_by_session_df, legend=False)
-    axis[0][1].set_ylim(0, 150)
-    axis[0][1].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    axis[0][1].set_yticks([0, 50, 100, 150])
-    axis[0][1].set(xlabel=None, ylabel='number of trials')
-
-
-    # sns.lineplot(ax=axis[1][0], x="session_num", y="percent_trials", hue='reach_score', palette="Blues",
-    #              data=for_heatmap_df[for_heatmap_df.genotype == 'Control'], legend=False)
-    # axis[1][0].set_ylim(0, 100)
-    # axis[1][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    # axis[1][0].set_yticks([0, 20, 40, 60, 80, 100])
-    # axis[1][0].set(xlabel=None, ylabel='percent of trials')
-
-    # plt.stackplot(x='session_num', y1=for_heatmap_df[for_heatmap_df.genotype == 'Knock-Out', for_heatmap_df['reach_score'] == 4], data=for_heatmap_df[for_heatmap_df.genotype == 'Knock-Out'], legend=False)
+    ax3.set_ylim(0, 150)
+    ax3.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax3.set_yticks([0, 50, 100, 150])
+    ax3.set(xlabel=None, ylabel='number of trials')
 
     ctrl_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Control']
     ko_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Knock-Out']
@@ -219,17 +314,17 @@ if __name__ == '__main__':
     mean_ko_reach_scores = mean_ko_reach_scores.reset_index()
     mean_ctrl_reach_scores=mean_ctrl_reach_scores.reset_index()
 
-    mean_ctrl_reach_scores.plot.line(x="session_num", y=['prop_4', 'prop_5'], ax=axis[1][0], cmap=red_cmap)
-    axis[1][0].set_ylim(0, 1)
-    axis[1][0].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    axis[1][0].set_yticks([0, 1])
-    axis[1][0].set(xlabel=None, ylabel='proportion of trials')
+    mean_ctrl_reach_scores.plot.line(x="session_num", y=['prop_4', 'prop_5'], ax=ax4, cmap=blue_cmap)
+    ax4.set_ylim(0, 1)
+    ax4.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax4.set_yticks([0, 1])
+    ax4.set(xlabel=None, ylabel='proportion of trials')
 
     mean_ko_reach_scores.plot.line(x="session_num", y=['prop_4', 'prop_5'],
-                                     ax=axis[1][1], cmap=blue_cmap)
-    axis[1][1].set_ylim(0, 1)
-    axis[1][1].set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    axis[1][1].set_yticks([0, 1])
-    axis[1][1].set(xlabel=None, ylabel='proportion of trials')
+                                     ax=ax5, cmap=red_cmap)
+    ax5.set_ylim(0, 1)
+    ax5.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax5.set_yticks([0, 1])
+    ax5.set(xlabel=None, ylabel=None)
     plt.tight_layout()
     plt.savefig('/Users/Krista/Desktop/figures/fig1.pdf')

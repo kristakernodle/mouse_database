@@ -1,7 +1,10 @@
 import pandas as pd
 
 from database_pkg import Mouse, Experiment, Session
-from data_visualization.plot_functions import plot_success_rate, plot_trial_numbers, plot_reach_score_percent_heatmap
+from data_visualization.plot_functions import (plot_success_rate,
+                                               plot_trial_numbers,
+                                               plot_reach_score_percent_heatmap,
+                                               plot_figure1,)
 
 
 def plot_heatmap(df):
@@ -126,8 +129,11 @@ if __name__ == '__main__':
     reach_scores_by_eartag_by_session_df['prop_8'] = reach_scores_by_eartag_by_session_df['prop_8'].fillna(0)
     reach_scores_by_eartag_by_session_df['prop_9'] = reach_scores_by_eartag_by_session_df['prop_9'].fillna(0)
 
+    plot_figure1(reach_scores_by_eartag_by_session_df)
+
     plot_success_rate("First Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
     plot_success_rate("Any Success", reach_scores_by_eartag_by_session_df, group=True, subtitle='by Genotype')
     plot_trial_numbers("Total Trials", reach_scores_by_eartag_by_session_df)
     plot_trial_numbers("Viable Trials", reach_scores_by_eartag_by_session_df)
     plot_heatmap(reach_scores_by_eartag_by_session_df)
+

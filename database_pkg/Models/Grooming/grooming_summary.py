@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from pandas import read_csv
+import pandas as pd
 
 from ..super_classes import Base
 from ...extensions import db
@@ -29,6 +29,13 @@ class GroomingSummary(Base):
 
     bouts = relationship("GroomingBout", backref='grooming_summary')
 
+    def data_equal(self, num_bouts, total_time_grooming, num_interrupted_bouts, num_chains, num_complete_chains):
+        return all([self.num_bouts == num_bouts,
+                    self.total_time_grooming == total_time_grooming,
+                    self.num_interrupted_bouts == num_interrupted_bouts,
+                    self.num_chains == num_chains,
+                    self.num_complete_chains == num_complete_chains])
+
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
 
@@ -42,7 +49,7 @@ class GroomingSummary(Base):
 
     @classmethod
     def reinstate(cls, full_path):
-        grooming_summary_df = read_csv(full_path,
+        grooming_summary_df = pd.read_csv(full_path,
                                           usecols=['grooming_summary_id', 'session_id', 'scored_session_dir',
                                                    'trial_num',
                                                    'trial_length', 'latency_to_onset', 'num_bouts',
@@ -70,3 +77,46 @@ class GroomingSummary(Base):
                                 num_chains=grooming_summary_row['num_chains'],
                                 num_complete_chains=grooming_summary_row['num_complete_chains'],
                                 avg_time_per_bout=grooming_summary_row['avg_time_per_bout']).add_to_db()
+
+    def update_from_bouts(self):
+        all_bouts_df = pd.DataFrame.from_records([bout.as_dict() for bout in self.bouts])
+
+        try:
+            all_bouts_df['total_frames'] = all_bouts_df['bout_end'] - all_bouts_df['bout_start']
+        except KeyError:
+            return
+
+        num_bouts = len(all_bouts_df)
+
+        complete_count_dict = all_bouts_df.complete.value_counts().sort_index().reset_index().transpose().to_dict()
+        complete_count = 0
+        incomplete_count = 0
+        for key, value in complete_count_dict.items():
+            if value['index']:
+                complete_count = value['complete']
+            elif not value['index']:
+                incomplete_count = value['complete']
+        num_chains = incomplete_count + complete_count
+        num_complete_chains = complete_count
+
+        interrupted_count_dict = all_bouts_df.interrupted.value_counts().sort_index().reset_index().transpose().to_dict()
+
+        interrupted_count = 0
+        for key, value in interrupted_count_dict.items():
+            if value['index']:
+                interrupted_count = value['interrupted']
+
+        num_interrupted_bouts = interrupted_count
+
+        all_grooming_frames = all_bouts_df.total_frames.sum()
+        total_time_grooming = all_grooming_frames / 100
+
+        if not self.data_equal(num_bouts, total_time_grooming, num_interrupted_bouts, num_chains, num_complete_chains):
+            self.num_bouts = num_bouts
+            self.total_time_grooming = total_time_grooming
+            self.num_interrupted_bouts = num_interrupted_bouts
+            self.num_chains = num_chains
+            self.num_complete_chains = num_complete_chains
+            self.update()
+
+

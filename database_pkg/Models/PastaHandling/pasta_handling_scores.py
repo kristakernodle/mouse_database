@@ -19,17 +19,30 @@ class PastaHandlingScores(Base):
     guide_paw_start = db.Column(db.String, nullable=False)
     left_forepaw_adjustments = db.Column(db.Integer, nullable=False)
     right_forepaw_adjustments = db.Column(db.Integer, nullable=False)
+
     left_forepaw_failure_to_contact = db.Column(db.Integer, nullable=False)
     right_forepaw_failure_to_contact = db.Column(db.Integer, nullable=False)
     guide_grasp_switch = db.Column(db.Integer, nullable=False)
     drops = db.Column(db.Integer, nullable=False)
     mouth_pulling = db.Column(db.Integer, nullable=False)
-    pasta_long_paws_together = db.Column(db.Boolean, nullable=False)
-    pasta_short_paws_apart = db.Column(db.Boolean, nullable=False)
-    abnormal_posture = db.Column(db.Boolean, nullable=False)
-    iron_grip = db.Column(db.Boolean, nullable=False)
-    guide_around_grasp = db.Column(db.Boolean, nullable=False)
-    angling_with_head_tilt = db.Column(db.Boolean, nullable=False)
+    pasta_long_paws_together = db.Column(db.Integer, nullable=False)
+    pasta_short_paws_apart = db.Column(db.Integer, nullable=False)
+    abnormal_posture = db.Column(db.Integer, nullable=False)
+    iron_grip = db.Column(db.Integer, nullable=False)
+    guide_around_grasp = db.Column(db.Integer, nullable=False)
+    angling_with_head_tilt = db.Column(db.Integer, nullable=False)
+
+    left_forepaw_failure_to_contact_bool = db.Column(db.Boolean, nullable=False)
+    right_forepaw_failure_to_contact_bool = db.Column(db.Boolean, nullable=False)
+    guide_grasp_switch_bool = db.Column(db.Boolean, nullable=False)
+    drops_bool = db.Column(db.Boolean, nullable=False)
+    mouth_pulling_bool = db.Column(db.Boolean, nullable=False)
+    pasta_long_paws_together_bool = db.Column(db.Boolean, nullable=False)
+    pasta_short_paws_apart_bool = db.Column(db.Boolean, nullable=False)
+    abnormal_posture_bool = db.Column(db.Boolean, nullable=False)
+    iron_grip_bool = db.Column(db.Boolean, nullable=False)
+    guide_around_grasp_bool = db.Column(db.Boolean, nullable=False)
+    angling_with_head_tilt_bool = db.Column(db.Boolean, nullable=False)
 
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)
@@ -44,6 +57,7 @@ class PastaHandlingScores(Base):
 
     @classmethod
     def reinstate(cls, full_path):
+        # TODO update for int & bool vals
         pasta_handling_scores_df = read_csv(full_path,
                                                usecols=['pasta_handling_score_id', 'session_id', 'scored_session_dir',
                                                         'trial_num', 'time_to_eat', 'grasp_paw_start',

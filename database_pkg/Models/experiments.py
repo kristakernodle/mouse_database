@@ -581,7 +581,12 @@ class DlxPastaHandling(Experiment):
 
                 score_sheet = pd.read_excel(scored_trial, engine='openpyxl', index_col=0).transpose()
 
-                boolean_values = {"Paws Together, Pasta Long": False,
+                boolean_values = {"Left Forepaw Failure to Contact": False,
+                                  "Right Forepaw Failure to Contact": False,
+                                  "Guide and Grasp Switch": False,
+                                  "Drop Count": False,
+                                  "Mouth Pulling": False,
+                                  "Paws Together, Pasta Long": False,
                                   "Paws Apart, Pasta Short": False,
                                   "Abnormal Posture": False,
                                   "Iron Grip": False,
@@ -589,7 +594,7 @@ class DlxPastaHandling(Experiment):
                                   "Angling with Head Tilt": False}
 
                 for key in boolean_values.keys():
-                    if score_sheet[key].all() > 0:
+                    if score_sheet[key].any() > 0:
                         boolean_values[key] = True
 
                 PastaHandlingScores(session_id=session.session_id,
@@ -600,19 +605,33 @@ class DlxPastaHandling(Experiment):
                                     guide_paw_start=score_sheet["Guide/Support Paw (at start)"]['value'],
                                     left_forepaw_adjustments=score_sheet["Left Forepaw Adjustments"]['value'],
                                     right_forepaw_adjustments=score_sheet["Right Forepaw Adjustments"]['value'],
-                                    left_forepaw_failure_to_contact=score_sheet["Left Forepaw Failure to Contact"][
-                                        'value'],
-                                    right_forepaw_failure_to_contact=score_sheet["Right Forepaw Failure to Contact"][
-                                        'value'],
+                                    left_forepaw_failure_to_contact=score_sheet[
+                                        "Left Forepaw Failure to Contact"]['value'],
+                                    right_forepaw_failure_to_contact=score_sheet[
+                                        "Right Forepaw Failure to Contact"]['value'],
                                     guide_grasp_switch=score_sheet["Guide and Grasp Switch"]['value'],
                                     drops=score_sheet["Drop Count"]['value'],
                                     mouth_pulling=score_sheet["Mouth Pulling"]['value'],
-                                    pasta_long_paws_together=boolean_values["Paws Together, Pasta Long"],
-                                    pasta_short_paws_apart=boolean_values["Paws Apart, Pasta Short"],
-                                    abnormal_posture=boolean_values["Abnormal Posture"],
-                                    iron_grip=boolean_values["Iron Grip"],
-                                    guide_around_grasp=boolean_values["Guide Around Grasp"],
-                                    angling_with_head_tilt=boolean_values["Angling with Head Tilt"]).add_to_db()
+                                    pasta_long_paws_together=score_sheet["Paws Together, Pasta Long"]['value'],
+                                    pasta_short_paws_apart=score_sheet["Paws Apart, Pasta Short"]['value'],
+                                    abnormal_posture=score_sheet["Abnormal Posture"]['value'],
+                                    iron_grip=score_sheet["Iron Grip"]['value'],
+                                    guide_around_grasp=score_sheet["Guide Around Grasp"]['value'],
+                                    angling_with_head_tilt=score_sheet["Angling with Head Tilt"]['value'],
+                                    left_forepaw_failure_to_contact_bool=boolean_values[
+                                        "Left Forepaw Failure to Contact"],
+                                    right_forepaw_failure_to_contact_bool=boolean_values[
+                                        "Right Forepaw Failure to Contact"],
+                                    guide_grasp_switch_bool=boolean_values["Guide and Grasp Switch"],
+                                    drops_bool=boolean_values["Drop Count"],
+                                    mouth_pulling_bool=boolean_values["Mouth Pulling"],
+                                    pasta_long_paws_together_bool=boolean_values["Paws Together, Pasta Long"],
+                                    pasta_short_paws_apart_bool=boolean_values["Paws Apart, Pasta Short"],
+                                    abnormal_posture_bool=boolean_values["Abnormal Posture"],
+                                    iron_grip_bool=boolean_values["Iron Grip"],
+                                    guide_around_grasp_bool=boolean_values["Guide Around Grasp"],
+                                    angling_with_head_tilt_bool=boolean_values["Angling with Head Tilt"]
+                                    ).add_to_db()
 
     def update_from_dirs(self):
         self._update_sessions()

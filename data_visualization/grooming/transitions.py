@@ -7,11 +7,11 @@ import database_pkg
 from database_pkg import GroomingBout, GroomingSummary
 
 
-save_dir = '/Users/Krista/OneDrive - Umich/grooming'
+save_dir = '/Users/Krista/OneDrive - Umich/figures/grooming'
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
 
-experiment = database_pkg.Models.experiments.Experiment.get_by_name("grooming")
+experiment = database_pkg.Models.experiments.Experiment.get_by_name("dlxCKO-grooming")
 
 grooming_data_by_bout = list()
 
@@ -43,8 +43,8 @@ for bout in experiment.grooming_bouts:
     })
 
 bouts_df = pd.DataFrame.from_records(grooming_data_by_bout)
-DATE = 20210211
-bouts_df.to_csv(f"{save_dir}/all_bouts_{DATE}.csv")
+# DATE = 20210211
+# bouts_df.to_csv(f"{save_dir}/all_bouts_{DATE}.csv")
 
 bouts_df.insert(bouts_df.shape[1], "Percent Incorrect Transitions",
                 bouts_df["num_incorrect_transitions"] / bouts_df["total_num_transitions"] * 100)
