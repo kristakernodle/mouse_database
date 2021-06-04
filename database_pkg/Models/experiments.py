@@ -9,6 +9,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import exists, and_
 
+from .mice import Mouse
+from .participant_details import ParticipantDetail
 from .reviewers import Reviewer
 from .sessions import Session, ChatSapSession
 from .SkilledReaching import Folder, Trial, BlindFolder, BlindTrial, SRTrialScore
@@ -183,6 +185,7 @@ class DlxSkilledReaching(Experiment):
                           trial_num=int(trial_num)).add_to_db()
 
     def _update_trial_scores(self):
+
         for folder in self.folders:
             # noinspection PyTypeChecker
             # doesn't check folder.score_folders is iterable
@@ -272,7 +275,7 @@ class DlxSkilledReaching(Experiment):
                                 groom = None
 
                             trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id).filter_by(
-                                                                       reviewer_id=reviewer.reviewer_id).first()
+                                reviewer_id=reviewer.reviewer_id).first()
 
                             if trial_score is None:
                                 if groom is None:
@@ -302,21 +305,45 @@ class DlxSkilledReaching(Experiment):
         self._update_trial_scores()
 
     def status_report(self):
-        all_folders_not_blinded = Folder.query\
-            .join(Session, Folder.session_id == Session.session_id)\
-            .filter(Session.experiment_id == self.experiment_id)\
+        all_folders_not_blinded = Folder.query \
+            .join(Session, Folder.session_id == Session.session_id) \
+            .filter(Session.experiment_id == self.experiment_id) \
             .filter(~exists()
-                    .where(and_(Folder.folder_id == BlindFolder.folder_id)))\
+                    .where(and_(Folder.folder_id == BlindFolder.folder_id))) \
             .all()
-        all_blind_folders_not_scored = BlindFolder.query\
-            .join(Folder, BlindFolder.folder_id == Folder.folder_id)\
-            .join(Session, Folder.session_id == Session.session_id)\
-            .filter(Session.experiment_id == self.experiment_id)\
+        all_blind_folders_not_scored = BlindFolder.query \
+            .join(Folder, BlindFolder.folder_id == Folder.folder_id) \
+            .join(Session, Folder.session_id == Session.session_id) \
+            .filter(Session.experiment_id == self.experiment_id) \
             .filter(~exists()
                     .where(and_(BlindFolder.folder_id == Trial.folder_id,
                                 Trial.trial_id == SRTrialScore.trial_id))).all()
         print(f"Number Folders Not Blinded: {len(all_folders_not_blinded)}\n"
               f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n")
+
+    def get_all_scored_trials(self):
+        all_scored_trials_list = SRTrialScore.query.join(Trial, SRTrialScore.trial_id == Trial.trial_id).filter(
+            Trial.experiment_id == self.experiment_id).all()
+        all_scored_trials_listdict = list()
+        for scored_trial in all_scored_trials_list:
+            trial = Trial.query.get(scored_trial.trial_id)
+            session = Session.query.get(trial.session_id)
+            mouse = Mouse.query.get(session.mouse_id)
+            reviewer = Reviewer.query.get(scored_trial.reviewer_id)
+            all_scored_trials_listdict.append(
+                {'eartag': mouse.eartag,
+                 'genotype': mouse.genotype,
+                 'birthdate': mouse.birthdate,
+                 'sex': mouse.sex,
+                 'session_dir': session.session_dir,
+                 'session_num': session.session_num,
+                 'session_date': session.session_date,
+                 'reviewer': f"{reviewer.first_name} {reviewer.last_name}",
+                 'trial_dir': trial.trial_dir,
+                 'reach_score': scored_trial.reach_score,
+                 'abnormal_movt_score': scored_trial.abnormal_movt_score,
+                 'grooming_score': scored_trial.grooming_score})
+        return pd.DataFrame.from_records(all_scored_trials_listdict)
 
 
 class DYT1SkilledReaching(DlxSkilledReaching):
@@ -387,6 +414,90 @@ class DYT1SkilledReaching(DlxSkilledReaching):
         super()._update_trials()
         self._update_trial_scores()
 
+    def merge_from_work(self, back_up_dir):
+
+        # The goal of this method is to selectively merge sessions, folders, trials, blind_folders, and blind_trials
+        # for this experiment only from the back_up_csv files
+        back_up_path = Path(back_up_dir)
+
+        remote_exp_table = pd.read_csv(back_up_path.joinpath('experiments.csv'))
+        remote_sessions_table = pd.read_csv(back_up_path.joinpath('sessions.csv'))
+        remote_folders_table = pd.read_csv(back_up_path.joinpath('folders.csv'))
+        remote_trials_table = pd.read_csv(back_up_path.join('trials.csv'))
+        remote_blind_folders_table = pd.read_csv(back_up_path.join('blind_folders.csv'))
+        remote_blind_trials_table = pd.read_csv(back_up_path.join('blind_trials.csv'))
+
+        remote_exp = remote_exp_table.query(f'experiment_name == "{self.experiment_name}"')
+
+        if remote_exp.experiment_id.item() != str(self.experiment_id):
+            print('wtf')
+            breakpoint()
+
+        # sessions
+        remote_sessions_this_exp = remote_sessions_table.query(f'experiment_id == "{self.experiment_id}"')
+        for index, remote_session in remote_sessions_this_exp.iterrows():
+            session = Session.query.get(remote_session.session_id)
+            if session is None:
+                Session(session_id=remote_session.session_id,
+                        mouse_id=remote_session.mouse_id,
+                        experiment_id=remote_session.experiment_id,
+                        session_date=Date.as_date(remote_session.session_date.replace('-', '')),
+                        session_dir=remote_session.session_dir,
+                        session_num=remote_session.session_num,
+                        poly_discrim=remote_session.poly_discrim).add_to_db()
+                session = Session.query.get(remote_session.session_id)
+
+            # folders
+            remote_folders_this_session = remote_folders_table.query(f'session_id == "{session.session_id}"')
+            if len(session.folders) != len(remote_folders_this_session):
+                for idx, remote_folder in remote_folders_this_session.iterrows():
+                    folder = Folder.query.get(remote_folder.folder_id)
+                    if folder is None:
+                        Folder(folder_id=remote_folder.folder_id,
+                               session_id=remote_folder.session_id,
+                               folder_dir=remote_folder.folder_dir,
+                               original_video=remote_folder.original_video,
+                               trial_frame_number_file=remote_folder.trial_frame_number_file).add_to_db()
+                        folder = Folder.query.get(remote_folder.folder_id)
+
+                        # blind folders
+                        remote_bf_this_folder = remote_blind_folders_table.query(f'folder_id == "{folder.folder_id}"')
+                        if len(folder.score_folders) != len(remote_bf_this_folder):
+                            for idx2, remote_bf in remote_bf_this_folder.iterrows():
+                                blind_folder = BlindFolder.query.get(remote_bf.blind_folder_id)
+                                if blind_folder is None:
+                                    BlindFolder(blind_folder_id=remote_bf.blind_folder_id,
+                                                folder_id=remote_bf.folder_id,
+                                                reviewer_id=remote_bf.reviewer_id,
+                                                blind_name=remote_bf.blind_name).add_to_db()
+
+            # trials
+            remote_trials_this_session = remote_trials_table.query(f'session_id == "{session.session_id}')
+            if len(session.trials) != len(remote_trials_this_session):
+                for idx, remote_trial in remote_trials_this_session:
+                    trial = Trial.query.get(remote_trial.trial_id)
+                    if trial is None:
+                        Trial(trial_id=remote_trial.trial_id,
+                              experiment_id=remote_trial.experiment_id,
+                              session_id=remote_trial.session_id,
+                              folder_id=remote_trial.folder_id,
+                              trial_dir=remote_trial.trial_dir,
+                              trial_date=Date.as_date(remote_trial.trial_date.replate('-', '')),
+                              trial_num=remote_trial.trial_num).add_to_db()
+                        trial = Trial.query.get(remote_trial.trial_id)
+
+                    # blind trials
+                    remote_blind_trials = remote_blind_trials_table.query(f'trial_id == "{trial.trial_id}"')
+                    for idx2, remote_bt in remote_blind_trials.iterrows():
+                        blind_trial = BlindTrial.query.get(remote_bt.blind_trial_id)
+                        if blind_trial is None:
+                            BlindTrial(blind_trial_id=remote_bt.blind_trial_id,
+                                       blind_folder_id=remote_bt.blind_folder_id,
+                                       reviewer_id=remote_bt.reivewer_id,
+                                       trial_id=remote_bt.trial_id,
+                                       folder_id=remote_bt.folder_id,
+                                       blind_trial_num=remote_bt.blind_trial_num).add_to_db()
+
 
 class DlxChatSapSkilledReaching(DlxSkilledReaching):
     __mapper_args__ = {'polymorphic_identity': 'dlxCKO-chatSap-skilled-reaching'}
@@ -417,14 +528,237 @@ class DlxChatSapSkilledReaching(DlxSkilledReaching):
                                        session_dir=str(session), session_num=int(session_num.strip('T'))).add_to_db()
 
     def _update_trial_scores(self):
-        # TODO complete DlxChatSapSkilledReaching._update_trial_scores method
-        pass
+        for folder in self.folders:
+            # noinspection PyTypeChecker
+            # doesn't check folder.score_folders is iterable
+            for blind_folder in folder.score_folders:
+                reviewer = Reviewer.query.get(blind_folder.reviewer_id)
+
+                if all([item is not None for item in
+                        [SRTrialScore.query.filter_by(
+                            trial_id=blind_trial.trial_id,
+                            reviewer_id=reviewer.reviewer_id).first()
+                         for blind_trial in blind_folder.blind_trials]]):
+                    continue
+
+                else:
+
+                    scored_blind_folder_path = Path(reviewer.scored_dir).joinpath(
+                        f"{blind_folder.blind_name}_{reviewer.first_name[0]}{reviewer.last_name[0]}.csv")
+
+                    if scored_blind_folder_path.exists():
+                        try:
+                            all_blind_folder_scores = pd.read_csv(
+                                scored_blind_folder_path,
+                                usecols=['Trial', 'Score', 'Movement', 'Grooming'],
+                                delimiter=',',
+                                dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                            )
+                        except ValueError:
+                            try:
+                                all_blind_folder_scores = pd.read_csv(
+                                    scored_blind_folder_path,
+                                    usecols=['Trial', 'Score', 'Movement', 'Grooming '],
+                                    delimiter=',',
+                                    dtype={'Trial': float, 'Score': float, 'Movement': str, 'Grooming ': str}
+                                )
+                                all_blind_folder_scores['Grooming'] = all_blind_folder_scores['Grooming ']
+                            except ValueError:
+                                try:
+                                    all_blind_folder_scores = pd.read_csv(
+                                        scored_blind_folder_path,
+                                        usecols=['Trial ', 'Score', 'Movement', 'Grooming'],
+                                        delimiter=',',
+                                        dtype={'Trial ': float, 'Score': float, 'Movement': str, 'Grooming': str}
+                                    )
+                                    all_blind_folder_scores['Trial'] = all_blind_folder_scores['Trial ']
+                                except ValueError:
+                                    print(f"For god's sake, reformat file {scored_blind_folder_path}")
+                        except (ParserError, ValueError):
+                            print(f"Reformat file {scored_blind_folder_path}")
+                            shutil.move(str(scored_blind_folder_path), str(Path(reviewer.scored_dir).parent))
+                            continue
+
+                        for index, scored_row in all_blind_folder_scores.iterrows():
+
+                            if isnan(scored_row['Trial']) or isnan(scored_row['Score']):
+                                continue
+
+                            blind_trial = BlindTrial.query.filter_by(blind_folder_id=blind_folder.blind_folder_id,
+                                                                     reviewer_id=reviewer.reviewer_id,
+                                                                     blind_trial_num=int(scored_row['Trial'])).first()
+
+                            if blind_trial is None:
+                                blind_trial_num = int(scored_row['Trial'])
+                                trial = Trial.query.filter_by(folder_id=folder.folder_id,
+                                                              trial_num=blind_trial_num).first()
+                                if trial is None:
+                                    print('Trial is none?')
+                                    continue
+                                blind_trial = BlindTrial(blind_folder_id=blind_folder.blind_folder_id,
+                                                         reviewer_id=reviewer.reviewer_id,
+                                                         trial_id=trial.trial_id,
+                                                         folder_id=folder.folder_id,
+                                                         blind_trial_num=blind_trial_num)
+                                blind_trial.add_to_db()
+
+                            if scored_row['Movement'] == '1':
+                                movt = True
+                            elif scored_row['Movement'] == '0':
+                                movt = False
+                            else:
+                                movt = None
+
+                            if scored_row['Grooming'] == '1':
+                                groom = True
+                            elif scored_row['Grooming'] == '0':
+                                groom = False
+                            else:
+                                groom = None
+
+                            trial_score = SRTrialScore.query.filter_by(trial_id=blind_trial.trial_id).filter_by(
+                                reviewer_id=reviewer.reviewer_id).first()
+
+                            if trial_score is None:
+                                if groom is None:
+                                    print('I guess we have to figure this out now')
+                                SRTrialScore(trial_id=blind_trial.trial_id,
+                                             reviewer_id=blind_trial.reviewer_id,
+                                             reach_score=int(scored_row['Score']),
+                                             abnormal_movt_score=movt,
+                                             grooming_score=groom).add_to_db()
+                            elif all([trial_score.reach_score == int(scored_row['Score']),
+                                      trial_score.abnormal_movt_score == movt,
+                                      trial_score.grooming_score == groom]):
+                                continue
+                            else:
+                                trial_score.reach_score = int(scored_row['Score'])
+                                trial_score.abnormal_movt_score = movt
+                                trial_score.grooming_score = groom
+                                trial_score.add_to_db()
+
+                    else:
+                        print(f"Not Scored: {str(scored_blind_folder_path)}")
 
     def update_from_dirs(self):
         self._update_sessions()
         super()._update_folders()
         super()._update_trials()
         self._update_trial_scores()
+
+    def merge_from_work(self, back_up_dir):
+
+        # The goal of this method is to selectively merge sessions, folders, trials, blind_folders, and blind_trials
+        # for this experiment only from the back_up_csv files
+        back_up_path = Path(back_up_dir)
+
+        remote_exp_table = pd.read_csv(back_up_path.joinpath('experiments.csv'))
+        remote_mice_path = back_up_path.joinpath('mice.csv')
+        remote_participant_details_path = back_up_path.joinpath('participant_details.csv')
+        remote_sessions_table = pd.read_csv(back_up_path.joinpath('sessions.csv'))
+        remote_folders_table = pd.read_csv(back_up_path.joinpath('folders.csv'))
+        remote_trials_table = pd.read_csv(back_up_path.joinpath('trials.csv'))
+        remote_blind_folders_table = pd.read_csv(back_up_path.joinpath('blind_folders.csv'))
+        remote_blind_trials_table = pd.read_csv(back_up_path.joinpath('blind_trials.csv'))
+
+        Mouse.reinstate(remote_mice_path)
+        ParticipantDetail.reinstate(remote_participant_details_path)
+
+        remote_exp = remote_exp_table.query(f'experiment_name == "{self.experiment_name}"')
+
+        if remote_exp.experiment_id.item() != str(self.experiment_id):
+            print('wtf')
+            breakpoint()
+
+        # sessions
+        remote_sessions_this_exp = remote_sessions_table.query(f'experiment_id == "{self.experiment_id}"')
+        for index, remote_session in remote_sessions_this_exp.iterrows():
+            session = Session.query.get(remote_session.session_id)
+            if session is None:
+                ChatSapSession(session_id=remote_session.session_id,
+                               mouse_id=remote_session.mouse_id,
+                               experiment_id=remote_session.experiment_id,
+                               session_date=Date.as_date(remote_session.session_date.replace('-', '')),
+                               session_dir=remote_session.session_dir,
+                               session_num=remote_session.session_num,
+                               experiment_phase=remote_session.experiment_phase,
+                               poly_discrim=remote_session.poly_discrim).add_to_db()
+                session = Session.query.get(remote_session.session_id)
+
+            # folders
+            remote_folders_this_session = remote_folders_table.query(f'session_id == "{session.session_id}"')
+            if len(session.folders) != len(remote_folders_this_session):
+                for idx, remote_folder in remote_folders_this_session.iterrows():
+                    folder_from_id = Folder.query.get(remote_folder.folder_id)
+                    folder_from_dir = Folder.query.filter_by(folder_dir=remote_folder.folder_dir).first()
+                    if folder_from_id is None and folder_from_dir is None:
+                        Folder(folder_id=remote_folder.folder_id,
+                               session_id=remote_folder.session_id,
+                               folder_dir=remote_folder.folder_dir,
+                               original_video=remote_folder.original_video,
+                               trial_frame_number_file=remote_folder.trial_frame_number_file).add_to_db()
+                    elif folder_from_id is None and folder_from_dir is not None:
+                        folder_from_dir.folder_id = remote_folder.folder_id
+                        folder_from_dir.update()
+                    elif folder_from_id is not None and folder_from_dir is None:
+                        folder_from_id.folder_dir = remote_folder.folder_dir
+                        folder_from_id.update()
+                    elif folder_from_id is not None and folder_from_dir is not None:
+                        if folder_from_id != folder_from_dir:
+                            print('what')
+
+                    folder = Folder.query.get(remote_folder.folder_id)
+
+                    # blind folders
+                    remote_bf_this_folder = remote_blind_folders_table.query(f'folder_id == "{folder.folder_id}"')
+                    if len(folder.score_folders) != len(remote_bf_this_folder):
+                        for idx2, remote_bf in remote_bf_this_folder.iterrows():
+                            blind_folder = BlindFolder.query.get(remote_bf.blind_folder_id)
+                            if blind_folder is None:
+                                BlindFolder(blind_folder_id=remote_bf.blind_folder_id,
+                                            folder_id=remote_bf.folder_id,
+                                            reviewer_id=remote_bf.reviewer_id,
+                                            blind_name=remote_bf.blind_name).add_to_db()
+
+                    # trials
+                    remote_trials_this_folder = remote_trials_table.query(f'folder_id == "{folder.folder_id}"')
+                    if len(folder.trials) != len(remote_trials_this_folder):
+                        for idx2, remote_trial in remote_trials_this_folder.iterrows():
+                            trial_from_id = Trial.query.get(remote_trial.trial_id)
+                            trial_from_dir = Trial.query.filter_by(trial_dir=remote_trial.trial_dir).first()
+
+                            if trial_from_id is None and trial_from_dir is None:
+                                Trial(trial_id=remote_trial.trial_id,
+                                      experiment_id=remote_trial.experiment_id,
+                                      session_id=remote_trial.session_id,
+                                      folder_id=remote_trial.folder_id,
+                                      trial_dir=remote_trial.trial_dir,
+                                      trial_date=Date.as_date(remote_trial.trial_date.replace('-', '')),
+                                      trial_num=remote_trial.trial_num).add_to_db()
+                            elif trial_from_id is None and trial_from_dir is not None:
+                                trial_from_dir.trial_id = remote_trial.trial_id
+                                trial_from_dir.update()
+                            elif trial_from_id is not None and trial_from_dir is None:
+                                trial_from_id.trial_dir = remote_trial.trial_dir
+                                trial_from_id.update()
+                            elif trial_from_id is not None and trial_from_dir is not None:
+                                if trial_from_id == trial_from_dir:
+                                    continue
+                                print('what')
+
+                            trial = Trial.query.get(remote_trial.trial_id)
+
+                            # blind trials
+                            remote_blind_trials = remote_blind_trials_table.query(f'trial_id == "{trial.trial_id}"')
+                            for idx3, remote_bt in remote_blind_trials.iterrows():
+                                blind_trial = BlindTrial.query.get(remote_bt.blind_trial_id)
+                                if blind_trial is None:
+                                    BlindTrial(blind_trial_id=remote_bt.blind_trial_id,
+                                               blind_folder_id=remote_bt.blind_folder_id,
+                                               reviewer_id=remote_bt.reviewer_id,
+                                               trial_id=remote_bt.trial_id,
+                                               folder_id=remote_bt.folder_id,
+                                               blind_trial_num=remote_bt.blind_trial_num).add_to_db()
 
 
 class DlxGrooming(Experiment):

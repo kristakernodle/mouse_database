@@ -9,10 +9,11 @@ import pandas as pd
 palette = {"Control": 'b', "Knock-Out": 'r'}
 heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
 ctrl_miss_palette = {'contact miss': 'b',
-                     'no contact miss': 'mediumturquoise'}
-ko_miss_palette = ctrl_miss_palette
-# ko_miss_palette = {'contact miss': '#ff0000',
-#                    'no contact miss': '#990000'}
+                     'no contact miss': 'b'}
+ko_miss_palette = {'contact miss': 'r',
+                     'no contact miss': 'r'}
+ko_miss_palette = {'contact miss': '#ff0000',
+                   'no contact miss': '#990000'}
 
 cap_size = 2
 
@@ -224,18 +225,22 @@ def plot_figure1(reach_scores_by_eartag_by_session_df):
 
     sns.set_theme(context='paper', style="white")
     figure = plt.figure()
-    figure.dpi = 300
+    w = 8
+    h = 6
+    figure.set_figwidth(w)
+    figure.set_figheight(h)
+    figure.set_dpi(600)
     figure.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
 
     ax1 = plt.subplot2grid((3, 2), (0, 0))
     ax2 = plt.subplot2grid((3, 2), (0, 1))
-    ax3 = plt.subplot2grid((3, 2), (1, 0))
-    ax4 = plt.subplot2grid((3, 2), (1, 1))
-    ax5 = plt.subplot2grid((3, 2), (2, 0), colspan=2)
+    ax3 = plt.subplot2grid((3, 2), (1, 0), colspan=2)
+    ax4 = plt.subplot2grid((3, 2), (2, 0))
+    ax5 = plt.subplot2grid((3, 2), (2, 1))
 
     # ax1.imshow(plt.imread('/Users/Krista/OneDrive - Umich/figures/figures_ai/skilled-reaching-box.png'))
     ax1.axis("off")
-    ax5.axis("off")
+    ax3.axis("off")
 
     sns.lineplot(ax=ax2, x="session_num", y="Any Success",
                  hue='genotype', hue_order=["Control", "Knock-Out"], palette=palette,
@@ -245,34 +250,41 @@ def plot_figure1(reach_scores_by_eartag_by_session_df):
     ax2.set_ylim(0, 50)
     ax2.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
     ax2.set_yticks([0, 10, 20, 30, 40, 50])
-    ax2.get_legend().set_title(None)
-    ax2.set(xlabel=None, ylabel='percent success')
-
-    sns.lineplot(ax=ax3, x="session_num", y="value",
-                 hue='miss_type', palette=ctrl_miss_palette,
-                 data=ctrl_proportion_df, legend=True,
-                 errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
-    ax3.set_ylim(0, 1)
-    ax3.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-    ax3.set_yticks([0, 1])
-    ax3.set(title='control', xlabel=None, ylabel='proportion of trials')
-    ax3.legend().remove()
+    ax2.get_legend().set_title('genotype')
+    labels = ['control', 'knockout']
+    ax2.legend(title='genotype', labels=labels)
+    ax2.set(xlabel='training day', ylabel='percent success')
 
     sns.lineplot(ax=ax4, x="session_num", y="value",
-                 hue='miss_type', palette=ko_miss_palette,
-                 data=ko_proportion_df, legend=True,
+                 hue='miss_type', style='miss_type', dashes=[(2, 2), ""], palette=ctrl_miss_palette,
+                 data=ctrl_proportion_df, legend=True,
                  errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
     ax4.set_ylim(0, 1)
     ax4.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
     ax4.set_yticks([0, 1])
-    ax4.set(title='knock-out', xlabel=None, ylabel='proportion of trials')
-    handles, labels = ax4.get_legend_handles_labels()
+    ax4.set(title='control', xlabel='training day', ylabel='proportion of trials')
+    handles_ctrl, labels_ctrl = ax4.get_legend_handles_labels()
     ax4.legend().remove()
 
-    figure.legend(handles=handles,
-                  labels=labels,
-                  loc="lower right",
-                  title="Miss Type")
+    sns.lineplot(ax=ax5, x="session_num", y="value",
+                 hue='miss_type', style='miss_type', dashes=[(2, 2), ""], palette=ko_miss_palette,
+                 data=ko_proportion_df, legend=True,
+                 errorbar="se", err_style="bars", err_kws={'capsize': cap_size})
+    ax5.set_ylim(0, 1)
+    ax5.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
+    ax5.set_yticks([0, 1])
+    ax5.set(title='knock-out', xlabel='training day', ylabel=None)
+    handles_ko, labels_ko = ax5.get_legend_handles_labels()
+    ax5.legend().remove()
+
+    legend_handles = list()
+    for handle in handles_ctrl:
+        handle.set_color('black')
+        legend_handles.append(handle)
+
+    ax5.legend(handles=legend_handles,
+                  labels=labels_ctrl,
+                  title="miss type")
     plt.tight_layout()
     plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/fig1.pdf')
 

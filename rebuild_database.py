@@ -50,4 +50,4 @@ def rebuild_database(back_up_dir):
 
 
 if __name__ == '__main__':
-    rebuild_database('/Volumes/SharedX/Neuro-Leventhal/data/mouseSkilledReaching/back_up_csv/20210224_1')
+    rebuild_database('/Volumes/SharedX/Neuro-Leventhal/data/mouseSkilledReaching/back_up_csv/20210601-home')

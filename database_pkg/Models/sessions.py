@@ -72,4 +72,4 @@ class Session(Base):
 class ChatSapSession(Session):
     __mapper_args__ = {'polymorphic_identity': 'chat-sap'}
 
-    experiment_phase = db.Column(db.String, nullable=True)
+    experiment_phase = db.Column(db.String, default='Training')
