@@ -23,7 +23,7 @@ for session in exp.sessions:
             data_by_bout.append({'bout_id': bout.grooming_bout_id,
                                  'session_id': session.session_id,
                                  'genotype': mouse.genotype,
-                                 'bout_time': (bout.bout_end - bout.bout_start) / 100,
+                                 'bout_time': (bout.end_frame - bout.start_frame) / 100,
                                  'total_transitions': bout.total_num_transitions,
                                  'total_incorrect_transitions': bout.num_incorrect_transitions,
                                  'num_initiation_incorrect_transitions': sum(

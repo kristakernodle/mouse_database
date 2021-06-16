@@ -84,7 +84,7 @@ class GroomingTrial(Base):
         # all_bouts_df = pd.DataFrame.from_records([bout.as_dict() for bout in self.bouts])
         #
         # try:
-        #     all_bouts_df['total_frames'] = all_bouts_df['bout_end'] - all_bouts_df['bout_start']
+        #     all_bouts_df['total_frames'] = all_bouts_df['end_frame'] - all_bouts_df['start_frame']
         # except KeyError:
         #     return
         #
