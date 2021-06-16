@@ -152,7 +152,8 @@ reach_scores_by_eartag_by_session_df['prop_4_s'] = reach_scores_by_eartag_by_ses
 reach_scores_by_eartag_by_session_df['prop_5'] = reach_scores_by_eartag_by_session_df['prop_5'].fillna(0)
 reach_scores_by_eartag_by_session_df['prop_5_s'] = reach_scores_by_eartag_by_session_df['prop_5_s'].fillna(0)
 
-reach_scores_by_eartag_by_session_df.to_csv("/Users/Krista/OneDrive - Umich/figures/reach_scores_by_eartag_by_session_df_20210604.csv")
+reach_scores_by_eartag_by_session_df.to_csv(
+    "/Users/Krista/OneDrive - Umich/figures/reach_scores_by_eartag_by_session_df_20210604.csv")
 
 ctrl_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Control']
 ko_reach_scores = reach_scores_by_eartag_by_session_df[reach_scores_by_eartag_by_session_df['genotype'] == 'Knock-Out']
@@ -162,31 +163,29 @@ ko_proportion_df = convert_reach_scores_df_proportion_df(ko_reach_scores)
 
 ## Start Figures
 
-genotype_palette = {'Control': 'b', 'Knock-Out': 'r'}
-
-# Blue: '#00407f', '#0080ff'
-# Red: '#990000', '#ff0000'
-ctrl_miss_palette = {'contact miss': 'b',
-                     'no contact miss': 'b'}
-ko_miss_palette = {'contact miss': 'r',
-                   'no contact miss': 'r'}
-
+# Figure level settings
 matplotlib.rcParams['font.family'] = "sans-serif"
 matplotlib.rcParams['font.sans-serif'] = "Arial"
+plt.rcParams['xtick.major.pad'] = -0.5
+plt.rcParams['ytick.major.pad'] = -0.5
 
 cap_size = 4
 cap_thick = 1.5
 err_line_width = 1.5
 line_width = 1.5
 dashed_lines = (2, 1)
+any_success_linespacing = 0.25
 
 sns.set_theme(context='paper', style="white")
 figure = plt.figure()
 w = 7.48031
 figure.set_figwidth(w)
 figure.set_dpi(1000)
-figure.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+# figure.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
 
+genotype_palette = {"Control": "#005AB5", "Knock-Out": "#DC3220"}
+
+# Define axes
 behavior_timeline_ax = plt.subplot2grid((3, 2), (0, 0))
 any_success_ax = plt.subplot2grid((3, 2), (0, 1))
 reach_exemplar_contact_ax = plt.subplot2grid((3, 2), (1, 0))
@@ -199,52 +198,118 @@ behavior_timeline_ax.axis("off")
 reach_exemplar_contact_ax.axis("off")
 reach_exemplar_noContact_ax.axis("off")
 
-#
+# Plot: Any Success
 sns.lineplot(ax=any_success_ax, x="session_num", y="any_success",
              hue='genotype', hue_order=["Control", "Knock-Out"], palette=genotype_palette,
              data=reach_scores_by_eartag_by_session_df, legend=True,
              linewidth=line_width,
-             errorbar="se", err_style="bars", err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
-any_success_ax.set_ylim(0, 50)
+             errorbar="se", err_style="bars",
+             err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
+any_success_ax.set_ylim(0, 40)
 any_success_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-any_success_ax.set_yticks([0, 10, 20, 30, 40, 50])
-# any_success_ax.get_legend().set_title('genotype')
+any_success_ax.set_xticklabels([None]*11)
+any_success_ax.set_yticks([10, 20, 30, 40])
+# Add significance
+# any_success_ax.plot([1, 21], [42, 42], color='black', linewidth=line_width / 2)
+# any_success_ax.annotate('*',
+#                         xy=(10.5, 42),
+#                         xytext=(10.5, 42),
+#                         xycoords='data',
+#                         ha='center')
+_, y_err_vals = any_success_ax.get_lines()[3].get_data()
+for tDay in [3, 5, 9, 12, 13, 14, 15, 19]:
+    any_success_ax.annotate('*',
+                            xy=(tDay, y_err_vals[tDay - 1]),
+                            xytext=(tDay, y_err_vals[tDay - 1]),
+                            xycoords='data',
+                            ha='center')
+any_success_ax.annotate('*\n*',
+                        xy=(10, y_err_vals[9]),
+                        xycoords='data',
+                        ha='center',
+                        linespacing=any_success_linespacing)
+any_success_ax.annotate('*\n*\n*',
+                        xy=(6, y_err_vals[5]),
+                        xycoords='data',
+                        ha='center',
+                        linespacing=any_success_linespacing)
 labels = ['control', 'Dlx-CKO']
 any_success_ax.legend(title=None, labels=labels)
-any_success_ax.set(xlabel=None, ylabel='percent success')
+any_success_ax.set(xlabel=None, ylabel='% success')
 
-sns.lineplot(ax=proportion_contact_ax, x="session_num", y="value",
-             hue='miss_type', style='miss_type', dashes=[dashed_lines, ""], palette=ctrl_miss_palette,
-             data=ctrl_proportion_df, legend=True,
+# Plot: Proportion Contact Trials
+sns.lineplot(ax=proportion_contact_ax, x="session_num", y="prop_4_s",
+             hue='genotype', hue_order=["Control", "Knock-Out"], palette=genotype_palette,
+             data=reach_scores_by_eartag_by_session_df, legend=False,
              linewidth=line_width,
-             errorbar="se", err_style="bars", err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
+             errorbar="se", err_style="bars",
+             err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
+
 proportion_contact_ax.set_ylim(0, 1)
 proportion_contact_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-proportion_contact_ax.set_yticks([0, 1])
-proportion_contact_ax.set(title='contact unsuccessful trials', xlabel=None, ylabel='proportion of trials')
-handles_ctrl, labels_ctrl = proportion_contact_ax.get_legend_handles_labels()
-proportion_contact_ax.legend().remove()
+proportion_contact_ax.set_xticklabels([None]*11)
+proportion_contact_ax.set_yticks([.25, .50, .75, 1.00])
+proportion_contact_ax.set_yticklabels([25, 50, 75, 100])
+proportion_contact_ax.set(title=None, xlabel=None, ylabel='pellet contact')
+# proportion_contact_ax.plot([1, 21], [0.20, 0.20], color='black', linewidth=line_width / 2)
+# proportion_contact_ax.annotate('**',
+#                                xy=(10.5, 0.07),
+#                                xytext=(10.5, 0.07),
+#                                xycoords='data',
+#                                ha='center')
+_, y_err_vals = proportion_contact_ax.get_lines()[6].get_data()
+for tDay in [9, 10, 13, 17]:
+    proportion_contact_ax.annotate('*',
+                                   xy=(tDay, y_err_vals[tDay - 1] - 0.13),
+                                   xycoords='data',
+                                   ha='center')
+for tDay in [3, 6, 7]:
+    proportion_contact_ax.annotate('*\n*',
+                                   xy=(tDay, y_err_vals[tDay - 1] - 0.19),
+                                   xycoords='data',
+                                   ha='center',
+                                   linespacing=any_success_linespacing)
 
-sns.lineplot(ax=proportion_noContact_ax, x="session_num", y="value",
-             hue='miss_type', style='miss_type', dashes=[dashed_lines, ""], palette=ko_miss_palette,
-             data=ko_proportion_df, legend=True,
+# Plot: Proportion No Contact Trials
+sns.lineplot(ax=proportion_noContact_ax, x="session_num", y="prop_5_s",
+             hue='genotype', hue_order=["Control", "Knock-Out"], palette=genotype_palette,
+             data=reach_scores_by_eartag_by_session_df, legend=False,
              linewidth=line_width,
-             errorbar="se", err_style="bars", err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
+             errorbar="se", err_style="bars",
+             err_kws={'capsize': cap_size, 'capthick': cap_thick, 'elinewidth': err_line_width})
+
 proportion_noContact_ax.set_ylim(0, 1)
 proportion_noContact_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
-proportion_noContact_ax.set_yticks([0, 1])
-proportion_noContact_ax.set(title='no contact unsuccessful trials', xlabel='training day', ylabel='proportion of trials')
-handles_ko, labels_ko = proportion_noContact_ax.get_legend_handles_labels()
-proportion_noContact_ax.legend().remove()
+proportion_noContact_ax.set_yticks([.25, .50, .75, 1.00])
+proportion_noContact_ax.set_yticklabels([25, 50, 75, 100])
+proportion_noContact_ax.set(title=None, xlabel='training day', ylabel='no pellet contact')
 
-legend_handles = list()
-for handle in handles_ctrl:
-    handle.set_color('black')
-    handle.set_linewidth(line_width)
-    legend_handles.append(handle)
+# proportion_noContact_ax.plot([1, 21], [0.85, 0.85], color='black', linewidth=line_width / 2)
+# proportion_noContact_ax.annotate('***',
+#                                  xy=(10.5, 0.85),
+#                                  xytext=(10.5, 0.85),
+#                                  xycoords='data',
+#                                  ha='center')
+_, y_err_vals = proportion_noContact_ax.get_lines()[7].get_data()
+for tDay in [8, 13]:
+    proportion_noContact_ax.annotate('*',
+                                     xy=(tDay, y_err_vals[tDay - 1]),
+                                     xytext=(tDay, y_err_vals[tDay - 1]),
+                                     xycoords='data',
+                                     ha='center')
+for tDay in [3, 5, 9, 12]:
+    proportion_noContact_ax.annotate('*\n*',
+                                     xy=(tDay, y_err_vals[tDay - 1]),
+                                     xycoords='data',
+                                     ha='center',
+                                     linespacing=any_success_linespacing)
+for tDay in [6, 7, 10]:
+    proportion_noContact_ax.annotate('*\n*\n*',
+                                     xy=(tDay, y_err_vals[tDay - 1]),
+                                     xycoords='data',
+                                     ha='center',
+                                     linespacing=any_success_linespacing)
 
-proportion_contact_ax.legend(handles=legend_handles,
-                             labels=['contact', "no contact"],
-                             title=None)
-plt.tight_layout()
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210506.pdf')
+# Closing Figure Settings
+plt.tight_layout(h_pad=0.3, pad=1)
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210607.pdf')

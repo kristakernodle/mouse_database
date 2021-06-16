@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 
 from database_pkg import Mouse, Experiment, Session
 
-palette = {"Control": 'b', "Knock-Out": 'r'}
-
 experiment = Experiment.get_by_name("dlxCKO-pasta-handling")
 
 ph_summary_data = list()
@@ -71,33 +69,21 @@ for ph_summary in experiment.scored_pasta_handling:
 ph_summary_df = pd.DataFrame.from_records(ph_summary_data)
 ph_summary_long_df = pd.DataFrame.from_records(ph_summary_data_long)
 
-## statistics
-control_trials = ph_summary_long_df[ph_summary_long_df.genotype == 'Control'].groupby('session_dir').agg(np.sum)
-knockout_trials = ph_summary_long_df[ph_summary_long_df.genotype == 'Knock-Out'].groupby('session_dir').agg(np.sum)
-stats.ttest_ind(control_trials["left_forepaw_adjustments"], knockout_trials["left_forepaw_adjustments"],
-                equal_var=False)
-stats.ttest_ind(control_trials["right_forepaw_adjustments"], knockout_trials["right_forepaw_adjustments"],
-                equal_var=False)
-stats.ttest_ind(control_trials["left_forepaw_failure_to_contact"], knockout_trials["left_forepaw_failure_to_contact"],
-                equal_var=False)
-stats.ttest_ind(control_trials["right_forepaw_failure_to_contact"], knockout_trials["right_forepaw_failure_to_contact"],
-                equal_var=False)
-stats.ttest_ind(control_trials["guide_grasp_switch"], knockout_trials["guide_grasp_switch"], equal_var=False)
-stats.ttest_ind(control_trials["drops"], knockout_trials["drops"])
-stats.ttest_ind(control_trials["mouth_pulling"], knockout_trials["mouth_pulling"])
-stats.ttest_ind(control_trials["mouth_pulling"], knockout_trials["mouth_pulling"], equal_var=False)
-stats.ttest_ind(control_trials["pasta_long_paws_together"], knockout_trials["pasta_long_paws_together"])
-stats.ttest_ind(control_trials["pasta_short_paws_apart"], knockout_trials["pasta_short_paws_apart"])
+ph_summary_long_df.insert(ph_summary_long_df.shape[1], 'forepaw_adjustments',
+                          (ph_summary_long_df['left_forepaw_adjustments'] +
+                           ph_summary_long_df['right_forepaw_adjustments']))
+
+ph_summary_long_df.insert(ph_summary_long_df.shape[1], 'forepaw_failure_to_contact',
+                          (ph_summary_long_df['left_forepaw_failure_to_contact'] +
+                           ph_summary_long_df['right_forepaw_failure_to_contact']))
 
 out_df = ph_summary_long_df.groupby("genotype").agg([np.mean, stats.sem])
 out_df = out_df.transpose().reset_index()
 out = out_df.rename(
     columns={"level_0": 'measure', 'level_1': "statistic", 'Control': "control", 'Knock-Out': 'knockout'})
 
-desired_measures = ['left_forepaw_adjustments',
-                    'right_forepaw_adjustments',
-                    'left_forepaw_failure_to_contact',
-                    'right_forepaw_failure_to_contact',
+desired_measures = ['forepaw_adjustments',
+                    'forepaw_failure_to_contact',
                     'guide_grasp_switch',
                     'drops',
                     'mouth_pulling',
@@ -109,10 +95,8 @@ desired_measures = ['left_forepaw_adjustments',
 #                     'guide_around_grasp',
 #                     'angling_with_head_tilt'
 
-out_dict = {'left_forepaw_adjustments': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'right_forepaw_adjustments': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'left_forepaw_failure_to_contact': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'right_forepaw_failure_to_contact': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
+out_dict = {'forepaw_adjustments': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
+            'forepaw_failure_to_contact': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
             'guide_grasp_switch': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
             'drops': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
             'mouth_pulling': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
@@ -132,8 +116,7 @@ for index, row in out.iterrows():
 out_df = pd.DataFrame.from_records(out_dict)
 plot_df = out_df.transpose()
 
-atypical_behavior_order = ["left_forepaw_failure_to_contact",
-                           "right_forepaw_failure_to_contact",
+atypical_behavior_order = ["forepaw_failure_to_contact",
                            "pasta_long_paws_together",
                            "pasta_short_paws_apart",
                            "guide_grasp_switch",
@@ -146,22 +129,25 @@ plot_df = plot_df.iloc[key.argsort()]
 plot_df = plot_df.rename_axis('measure').reset_index()
 plot_df = plot_df[plot_df['measure'].isin(atypical_behavior_order)]
 
+## Start Figures
+
+# Figure level settings
+matplotlib.rcParams['font.family'] = "sans-serif"
+matplotlib.rcParams['font.sans-serif'] = "Arial"
+
 fig, ax = plt.subplots()
 fig.set_figwidth(7.48031)
 fig.set_figheight(2.5)
 fig.set_dpi(1000)
-matplotlib.rcParams['font.family'] = "sans-serif"
-matplotlib.rcParams['font.sans-serif'] = "Arial"
 
 ax1 = plt.subplot2grid((1, 1), (0, 0))
 
 plot_df.plot.bar(x='measure', y=["ctrl_mean", "ko_mean"],
                  ax=ax1,
-                 color={"ctrl_mean": 'b', "ko_mean": 'r'},
+                 color={"ctrl_mean": "#005AB5", "ko_mean": "#DC3220"},
                  yerr=[plot_df["ctrl_sem"], plot_df["ko_sem"]],
-                 capsize=2)
-ax1.set_xticklabels(["left forepaw\nno contact",
-                     "right forepaw\nno contact",
+                 capsize=4)
+ax1.set_xticklabels(["any forepaw\nno contact",
                      "pasta long,\npaws together",
                      "pasta short,\npaws apart",
                      "guide/grasp\nswitch",
@@ -170,8 +156,16 @@ ax1.set_xticklabels(["left forepaw\nno contact",
                     rotation='horizontal')
 ax1.set_xlabel(None)
 ax1.set_ylabel('mean observations / trial')
+ax1.set_ylim(0, 1.9)
 ax1.set_yticks([0, 0.5, 1, 1.5])
 ax1.set_yticklabels([0, 0.5, 1, 1.5])
 ax1.legend(title=None, labels=["control", "Dlx-CKO"])
+
+ax1.plot([4.875, 5.125], [1.75, 1.75], color='black', linewidth=1.0)
+ax1.annotate('*',
+             xy=(5, 1.75),
+             xycoords='data',
+             ha='center')
+
 plt.tight_layout()
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210506.pdf')
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210607.pdf')
