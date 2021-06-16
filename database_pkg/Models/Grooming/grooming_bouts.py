@@ -16,8 +16,9 @@ class GroomingBout(Base):
     grooming_trial_id = db.Column(UUID(as_uuid=True), db.ForeignKey('grooming_trials.grooming_trial_id'),
                                     nullable=False)
     bout_string = db.Column(db.String, nullable=False)
-    start_frame = db.Column(db.Integer, nullable=False)
-    end_frame = db.Column(db.Integer, nullable=False)
+    start_frame = db.Column(db.Integer, nullable=True)
+    end_frame = db.Column(db.Integer, nullable=True)
+    bout_length = db.Column(db.Float, nullable=True)
     num_chains = db.Column(db.SmallInteger, nullable=False)
     num_complete_chains = db.Column(db.SmallInteger, nullable=False)
 

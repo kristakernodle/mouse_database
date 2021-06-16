@@ -27,7 +27,7 @@ class GroomingTrial(Base):
     num_complete_chains = db.Column(db.SmallInteger, nullable=False)
 
     bouts = relationship("GroomingBout", backref='grooming_trials')
-    chains = relationship("GroomingChains", backref='grooming_trials')
+    chains = relationship("GroomingChain", backref='grooming_trials')
 
     def data_equal(self, other_trial):
         return all([self.num_bouts == other_trial.num_bouts,

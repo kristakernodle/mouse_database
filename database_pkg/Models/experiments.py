@@ -8,13 +8,14 @@ from pandas.errors import ParserError
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import exists, and_
+from typing import List
 
 from .mice import Mouse
 from .participant_details import ParticipantDetail
 from .reviewers import Reviewer
 from .sessions import Session, ChatSapSession
 from .SkilledReaching import Folder, Trial, BlindFolder, BlindTrial, SRTrialScore
-from .Grooming import GroomingTrial, GroomingBout
+from .Grooming import GroomingTrial, GroomingBout, GroomingChain
 from .PastaHandling import PastaHandlingScores
 from .super_classes import Base
 from ..utilities import get_original_video_and_frame_number_file, Date
@@ -30,7 +31,7 @@ class Experiment(Base):
     __mapper_args__ = {'polymorphic_on': experiment_name}
 
     participants = relationship("ParticipantDetail", backref="experiments")
-    sessions = relationship("Session", backref="experiments")
+    sessions: List[Session] = relationship("Session", backref="experiments")
 
     def __repr__(self):
         return f"< Experiment {self.experiment_name} >"
@@ -764,130 +765,248 @@ class DlxChatSapSkilledReaching(DlxSkilledReaching):
 class DlxGrooming(Experiment):
     __mapper_args__ = {'polymorphic_identity': 'dlxCKO-grooming'}
 
-    scored_grooming = relationship(
+    grooming_trials = relationship(
         "GroomingTrial",
         secondary="join(Session, GroomingTrial, Session.session_id == GroomingTrial.session_id)",
         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
                     "Session.session_id == GroomingTrial.session_id)",
         secondaryjoin="Session.session_id == GroomingTrial.session_id")
 
-    grooming_bouts = relationship(
-        "GroomingBout",
-        secondary="join(Session, GroomingBout, Session.session_id == GroomingBout.session_id)",
-        primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                    "Session.session_id == GroomingBout.session_id)",
-        secondaryjoin="Session.session_id == GroomingBout.session_id")
+    def _update_chains(self, bout: GroomingBout, all_bout_chains):
+        all_bout_chains = all_bout_chains.reset_index(drop=True)
+        for idx, chain_row in all_bout_chains.iterrows():
+            duration = int(chain_row['end frame']) - chain_row['start frame']/100
+            complete = False
+            if '4' in chain_row['chain choreography']:
+                complete = True
 
-    def _update_grooming_summary(self):
-        # noinspection PyTypeChecker
-        for session in self.sessions:
-            session_dir = Path(session.session_dir)
-            scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
-                .joinpath(session_dir.parent.stem) \
-                .joinpath(session_dir.stem)
+            chain_chor = list(map(int, chain_row['chain choreography'].split('-')))
 
-            if not scored_session_dir.exists():
-                continue
+            num_transitions = len(chain_chor)-1
+            skips = 0
+            reverse = 0
+            atypical_end = 0
 
-            score_sheet_path = list(scored_session_dir.glob('*.xlsx'))
-
-            if len(score_sheet_path) != 1:
-                continue
-            else:
-                score_sheet_path = score_sheet_path[0]
-
-            score_sheet = pd.read_excel(score_sheet_path, engine='openpyxl', index_col=0).transpose()
-
-            for item in score_sheet.index:
-                if 'Trial' not in item:
-                    continue
-
-                GroomingTrial(session_id=session.session_id,
-                              scored_session_dir=str(score_sheet_path),
-                              trial_num=int(item.strip('Trial')),
-                              trial_length=score_sheet['Total session time (m)'][item],
-                              latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
-                              num_bouts=score_sheet["Number of Bouts"][item],
-                              total_time_grooming=score_sheet["Total Time DlxGrooming (s)"][item],
-                              num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
-                              num_chains=score_sheet["Number of Chains"][item],
-                              num_complete_chains=score_sheet["Number of Complete Chains"][item],
-                              avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
-
-    def _update_grooming_bouts_and_chains(self):
-        # noinspection PyTypeChecker
-        for session in self.sessions:
-            session_dir = Path(session.session_dir)
-            scored_session_dir = session_dir.parent.parent.joinpath('grooming_analysis_algorithm') \
-                .joinpath(session_dir.parent.stem) \
-                .joinpath(session_dir.stem)
-            scored_files_by_vid = list(scored_session_dir.glob('*_*_0*.csv'))
-            scored_files_by_vid.sort()
-            trial_num = 0
-            for scored_file in scored_files_by_vid:
-
-                scored_file_df = pd.read_csv(scored_file,
-                                             usecols=['Frame Number', 'Description', 'Sequence'],
-                                             delimiter=',')
-                trial_start_df = scored_file_df[scored_file_df['Description'] == 'trial start']
-
-                if len(trial_start_df) == 0:
-                    # The trial start and end are defined by the video numbers
-                    file_num = int(scored_file.stem.split('_')[-1])
-                    if file_num < 3:
-                        trial_num = 1
-                    else:
-                        trial_num = 2
+            for seq_num, phase in enumerate(chain_chor):
+                if seq_num == num_transitions:
+                    if phase != 4:
+                        atypical_end += 1
                 else:
-                    trial_num += 1
+                    next_phase = chain_chor[seq_num + 1]
+                    if phase + 1 == next_phase:
+                        continue
+                    elif phase - 1 == next_phase:
+                        reverse += 1
+                    else:
+                        skips += 1
+            chain = GroomingChain.query.filter_by(grooming_trial_id=bout.grooming_trial_id,
+                                                  chain_string=chain_row['chain choreography']).first()
+            if chain is None:
+                GroomingChain(grooming_bout_id=bout.grooming_bout_id,
+                              grooming_trial_id=bout.grooming_trial_id,
+                              chain_string=chain_row['chain choreography'],
+                              start_frame=chain_row['start frame'],
+                              end_frame=chain_row['end frame'],
+                              duration=duration,
+                              complete=complete,
+                              grooming_phase_1=chain_chor.count(1),
+                              grooming_phase_2=chain_chor.count(2),
+                              grooming_phase_3=chain_chor.count(3),
+                              grooming_phase_4=chain_chor.count(4),
+                              num_transitions=len(chain_chor),
+                              num_atypical_transitions=skips+reverse+atypical_end,
+                              num_skips=skips,
+                              num_reverse=reverse,
+                              num_atypical_end=atypical_end
+                              ).add_to_db()
 
-                grooming_summary = GroomingTrial.query.filter_by(session_id=session.session_id,
-                                                                 trial_num=trial_num).first()
-                if grooming_summary is None:
-                    continue
+    def _update_bouts(self, grooming_trial, all_trial_rows, all_trial_chains):
+        all_trial_rows = all_trial_rows.reset_index(drop=True)
+        all_trial_chains = all_trial_chains.reset_index(drop=True)
 
-                bout_start_df = scored_file_df[scored_file_df['Description'] == 'bout start']
-                for index in bout_start_df.index:
-                    bout_start_frame, _, bout_sequence = scored_file_df.iloc[index]
-                    bout_end_frame, description, _ = scored_file_df.iloc[index + 1]
-                    if description.lower() != 'bout end':
-                        if description.lower() == 'video end':
-                            video_end_frame = bout_end_frame
-                            next_scored_file_df = pd.read_csv(
-                                scored_files_by_vid[scored_files_by_vid.index(scored_file) + 1],
-                                usecols=['Frame Number', 'Description', 'Sequence'],
-                                delimiter=',')
-                            # TODO simplify this code
-                            bout_continue_df = next_scored_file_df[
-                                next_scored_file_df['Description'] == 'bout continue']
-                            if len(bout_continue_df) == 0:
-                                bout_continue_df = next_scored_file_df[
-                                    next_scored_file_df['Description'] == 'bout continued']
-                                if len(bout_continue_df) == 0:
-                                    print('what')
-                            _, _, bout_continue_sequence = bout_continue_df.iloc(bout_continue_df.index[0])
-                            bout_continue_sequence = bout_continue_sequence.iloc[0]
-                            bout_end_frame, description, _ = next_scored_file_df.iloc[bout_continue_df.index[0] + 1]
+        new_bout = None
+        continued_flag = False
+        chain_idx = 0
+        for idx, trial_row in all_trial_rows.iterrows():
 
-                            if description == 'bout end':
-                                bout_end_frame = video_end_frame + bout_end_frame
-                            else:
-                                print('what')
+            if trial_row['Description'] in ['video start', 'video end']:
+                continue
+            elif trial_row['Description'] == 'bout start' and new_bout is None:
+                if isnan(trial_row['Complete Chains']):
+                    trial_row['Complete Chains'] = trial_row['Complete Chain']
+                if isnan(trial_row['Chains']):
+                    trial_row['Chains'] = trial_row['Chain']
+                new_bout = GroomingBout(grooming_trial_id=grooming_trial.grooming_trial_id,
+                                        bout_string=trial_row['Sequence'],
+                                        start_frame=trial_row['Frame Number'],
+                                        bout_length=0,
+                                        num_chains=int(trial_row['Chains']),
+                                        num_complete_chains=int(trial_row['Complete Chains']))
+            elif trial_row['Description'] == 'bout continue' and new_bout is not None:
+                [idx_video_end] = all_trial_rows['Description'].loc[lambda x: x == 'video end'].index.to_list()
+                video_end = all_trial_rows.iloc[idx_video_end]
+                new_bout.bout_length += video_end['Frame Number'] - new_bout.start_frame
+                new_bout.bout_string = '-'.join([new_bout.bout_string, trial_row['Sequence']])
+                new_bout.num_chains += int(trial_row['Chains'])
+                new_bout.num_complete_chains += int(trial_row['Complete Chains'])
+                continued_flag = True
+            elif trial_row['Description'] == 'bout end' and new_bout is not None:
+                new_bout.end_frame = trial_row['Frame Number']
+                if continued_flag:
+                    new_bout.bout_length = (new_bout.bout_length + new_bout.end_frame) / 100
+                else:
+                    new_bout.bout_length = (new_bout.end_frame - new_bout.start_frame) / 100
 
-                            bout_sequence = '-'.join([bout_sequence, bout_continue_sequence])
-                        else:
-                            print('figure this case out')
+                bout = GroomingBout.query.filter_by(grooming_trial_id=grooming_trial.grooming_trial_id,
+                                                    bout_string=new_bout.bout_string).first()
+                if bout is None:
+                    new_bout.add_to_db()
+                    bout = GroomingBout.query.filter_by(grooming_trial_id=grooming_trial.grooming_trial_id,
+                                                        bout_string=new_bout.bout_string).first()
+                bout = GroomingBout.query.filter_by(grooming_trial_id=new_bout.grooming_trial_id,
+                                                    bout_string=new_bout.bout_string).first()
+                new_bout = None
+                continued_flag = False
 
-                    GroomingBout(grooming_summary_id=grooming_summary.grooming_trial_id,
-                                 session_id=session.session_id,
-                                 bout_string=bout_sequence,
-                                 bout_start=int(bout_start_frame),
-                                 bout_end=int(bout_end_frame)).add_to_db()
+                if bout.num_chains > 0:
+                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(bout.num_chains)])
+                    chain_idx += bout.num_chains
+
+    def _update_grooming_trials(self):
+
+        for session in self.sessions:
+
+            session_dir = Path(session.session_dir)
+            score_sheet_paths = list(session_dir.glob('*_*_*.xlsx'))
+
+            if len(score_sheet_paths) == 0:
+                continue
+
+            score_sheet_paths.sort()
+            bouts_df = pd.DataFrame()
+            chains_df = pd.DataFrame()
+            chain_idx = 0
+            for score_sheet_path in score_sheet_paths:
+                xls_score_sheet = pd.ExcelFile(score_sheet_path, engine='openpyxl')
+                bouts_df = pd.concat([bouts_df, pd.read_excel(xls_score_sheet, 'bouts').fillna(0)])
+                chains_df = pd.concat([chains_df, pd.read_excel(xls_score_sheet, 'chains').fillna(0)])
+
+            bouts_df = bouts_df.reset_index(drop=True)
+            chains_df = chains_df.reset_index(drop=True)
+
+            if 'Chains' not in bouts_df.columns.to_list() or 'Complete Chains' not in bouts_df.columns.to_list():
+                print(f'reformat file: {session.session_dir}')
+                continue
+
+            idx_all_trial_start = bouts_df['Description'].loc[lambda x: x == 'trial start'].index.to_list()
+            idx_all_trial_end = bouts_df['Description'].loc[lambda x: x == 'trial end'].index.to_list()
+            all_trial_idx = list(zip(idx_all_trial_start, idx_all_trial_end))
+
+            if len(all_trial_idx) == 0:
+                num_sheets_first_trial = round(len(score_sheet_paths)/2)
+
+                bouts_1_df = pd.DataFrame()
+                chains_1_df = pd.DataFrame()
+                bouts_2_df = pd.DataFrame()
+                chains_2_df = pd.DataFrame()
+                for score_sheet_path in score_sheet_paths[0:num_sheets_first_trial]:
+                    xls_score_sheet = pd.ExcelFile(score_sheet_path, engine='openpyxl')
+                    bouts_1_df = pd.concat([bouts_1_df, pd.read_excel(xls_score_sheet, 'bouts').fillna(0)])
+                    chains_1_df = pd.concat([chains_1_df, pd.read_excel(xls_score_sheet, 'chains').fillna(0)])
+
+                for score_sheet_path in score_sheet_paths[num_sheets_first_trial:]:
+                    xls_score_sheet = pd.ExcelFile(score_sheet_path, engine='openpyxl')
+                    bouts_2_df = pd.concat([bouts_2_df, pd.read_excel(xls_score_sheet, 'bouts').fillna(0)])
+                    chains_2_df = pd.concat([chains_2_df, pd.read_excel(xls_score_sheet, 'chains').fillna(0)])
+
+                bouts_1_df = bouts_1_df.reset_index(drop=True)
+                chains_1_df = chains_1_df.reset_index(drop=True)
+                bouts_2_df = bouts_2_df.reset_index(drop=True)
+                chains_2_df = chains_2_df.reset_index(drop=True)
+
+                for trial_num, (bouts_df, chains_df) in enumerate([(bouts_1_df, chains_1_df), (bouts_2_df, chains_2_df)]):
+                    if 'Chains' not in bouts_df.columns.to_list() or 'Complete Chains' not in bouts_df.columns.to_list():
+                        print(f'reformat file: {session.session_dir}')
+                        continue
+
+                    try:
+                        idx_all_bout_start = bouts_df['Description'].loc[lambda x: x == 'bout start'].index.to_list()
+                        all_bout_start_rows = bouts_df.iloc[idx_all_bout_start]
+                    except IndexError:
+                        breakpoint()
+
+                    idx_all_bout_end = bouts_df['Description'].loc[lambda x: x == 'bout end'].index.to_list()
+                    all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
+
+                    total_time_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
+                    num_bouts = len(all_bout_start_rows)
+
+                    num_chains = all_bout_start_rows['Chains'].sum()
+                    num_complete_chains = all_bout_start_rows['Complete Chains'].sum()
+
+                    grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
+                                                                   trial_num=trial_num + 1).first()
+
+                    if grooming_trial is None:
+                        GroomingTrial(session_id=session.session_id,
+                                       scored_session_dir=session.session_dir,
+                                       trial_num=trial_num+1,
+                                       total_time_grooming=total_time_grooming.item()/100,
+                                       num_bouts=num_bouts,
+                                       num_chains=num_chains.item(),
+                                       num_complete_chains=num_complete_chains.item()).add_to_db()
+
+                        grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
+                                                                       trial_num=trial_num+1).first()
+
+                    self._update_bouts(grooming_trial, bouts_df, chains_df.iloc[int(chain_idx):int(num_chains)])
+                    chain_idx += num_chains
+
+            for trial_num, [trial_start_idx, trial_end_idx] in enumerate(all_trial_idx):
+
+                trial_start_row = bouts_df.iloc[trial_start_idx]
+                trial_end_row = bouts_df.iloc[trial_end_idx]
+                all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx-1]
+
+                idx_all_bout_start = all_trial_rows['Description'].loc[lambda x: x == 'bout start'].index.to_list()
+                all_bout_start_rows = bouts_df.iloc[idx_all_bout_start]
+
+                idx_all_bout_end = all_trial_rows['Description'].loc[lambda x: x == 'bout end'].index.to_list()
+                all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
+
+                trial_length = (trial_end_row['Frame Number'] - trial_start_row['Frame Number']) / 100
+                total_time_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
+                try:
+                    latency_to_onset = (bouts_df.iloc[idx_all_bout_start[0]]['Frame Number'] -
+                                    trial_start_row['Frame Number']) / 100
+                except IndexError:
+                    breakpoint()
+                num_bouts = len(all_bout_start_rows)
+
+                num_chains = all_bout_start_rows['Chains'].sum()
+                num_complete_chains = all_bout_start_rows['Complete Chains'].sum()
+
+                grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
+                                                               trial_num=trial_num+1).first()
+                if grooming_trial is None:
+                    GroomingTrial(session_id=session.session_id,
+                                   scored_session_dir=session.session_dir,
+                                   trial_num=trial_num+1,
+                                   trial_length=trial_length,
+                                   total_time_grooming=total_time_grooming.item()/100,
+                                   latency_to_onset=latency_to_onset,
+                                   num_bouts=num_bouts,
+                                   num_chains=num_chains.item(),
+                                   num_complete_chains=num_complete_chains.item()).add_to_db()
+
+                    grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
+                                                                   trial_num=trial_num+1).first()
+
+                self._update_bouts(grooming_trial, all_trial_rows, chains_df.iloc[int(chain_idx):int(num_chains)])
+                chain_idx += num_chains
 
     def update_from_dirs(self):
-        self._update_sessions()
-        self._update_grooming_summary()
-        self._update_grooming_bouts_and_chains()
+        self._update_grooming_trials()
 
 
 class DlxPastaHandling(Experiment):

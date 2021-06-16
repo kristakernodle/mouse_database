@@ -16,7 +16,7 @@ class GroomingChain(Base):
     chain_string = db.Column(db.String, nullable=False)
     start_frame = db.Column(db.Integer, nullable=False)
     end_frame = db.Column(db.Integer, nullable=False)
-    duration = db.Column(db.SmallInteger, nullable=True)
+    duration = db.Column(db.Float, nullable=True)
     complete = db.Column(db.Boolean, nullable=True)
     grooming_phase_1 = db.Column(db.SmallInteger, nullable=True)
     grooming_phase_2 = db.Column(db.SmallInteger, nullable=True)
@@ -26,7 +26,7 @@ class GroomingChain(Base):
     num_atypical_transitions = db.Column(db.SmallInteger, nullable=True)
     num_skips = db.Column(db.SmallInteger, nullable=True)
     num_reverse = db.Column(db.SmallInteger, nullable=True)
-    num_aborted = db.Column(db.SmallInteger, nullable=True)
+    num_atypical_end = db.Column(db.SmallInteger, nullable=True)
 
     def add_to_db(self, my_object=None):
         super().add_to_db(my_object=self)

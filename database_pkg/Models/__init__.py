@@ -15,7 +15,8 @@ from .SkilledReaching.folders import Folder
 from .SkilledReaching.sr_trial_scores import SRTrialScore
 from .SkilledReaching.trials import Trial
 
-from .Grooming.grooming_bouts import GroomingBout
 from .Grooming.grooming_trials import GroomingTrial
+from .Grooming.grooming_bouts import GroomingBout
+from .Grooming.grooming_chains import GroomingChain
 
 from .PastaHandling.pasta_handling_scores import PastaHandlingScores

@@ -4,6 +4,7 @@ from .utilities import Date
 from .Models import (PastaHandlingScores,
                      GroomingBout,
                      GroomingTrial,
+                     GroomingChain,
                      SRTrialScore,
                      BlindTrial,
                      Trial,
