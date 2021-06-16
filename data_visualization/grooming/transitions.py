@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 import database_pkg
-from database_pkg import GroomingBout, GroomingSummary
+from database_pkg import GroomingBout, GroomingTrial
 
 
 save_dir = '/Users/Krista/OneDrive - Umich/figures/grooming'
@@ -18,7 +18,7 @@ grooming_data_by_bout = list()
 bout: GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = GroomingSummary.query.get(bout.grooming_summary_id)
+    grooming_summary = GroomingTrial.query.get(bout.grooming_summary_id)
     session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
     mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 
@@ -146,7 +146,7 @@ all_incorrect_transitions = list()
 bout: GroomingBout
 for bout in experiment.grooming_bouts:
 
-    grooming_summary = GroomingSummary.query.get(bout.grooming_summary_id)
+    grooming_summary = GroomingTrial.query.get(bout.grooming_summary_id)
     session = database_pkg.Models.sessions.Session.query.get(bout.session_id)
     mouse = database_pkg.Models.mice.Mouse.query.get(session.mouse_id)
 

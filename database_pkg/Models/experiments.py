@@ -14,7 +14,7 @@ from .participant_details import ParticipantDetail
 from .reviewers import Reviewer
 from .sessions import Session, ChatSapSession
 from .SkilledReaching import Folder, Trial, BlindFolder, BlindTrial, SRTrialScore
-from .Grooming import GroomingSummary, GroomingBout
+from .Grooming import GroomingTrial, GroomingBout
 from .PastaHandling import PastaHandlingScores
 from .super_classes import Base
 from ..utilities import get_original_video_and_frame_number_file, Date
@@ -765,11 +765,11 @@ class DlxGrooming(Experiment):
     __mapper_args__ = {'polymorphic_identity': 'dlxCKO-grooming'}
 
     scored_grooming = relationship(
-        "GroomingSummary",
-        secondary="join(Session, GroomingSummary, Session.session_id == GroomingSummary.session_id)",
+        "GroomingTrial",
+        secondary="join(Session, GroomingTrial, Session.session_id == GroomingTrial.session_id)",
         primaryjoin="and_(Session.experiment_id == Experiment.experiment_id, "
-                    "Session.session_id == GroomingSummary.session_id)",
-        secondaryjoin="Session.session_id == GroomingSummary.session_id")
+                    "Session.session_id == GroomingTrial.session_id)",
+        secondaryjoin="Session.session_id == GroomingTrial.session_id")
 
     grooming_bouts = relationship(
         "GroomingBout",
@@ -802,17 +802,17 @@ class DlxGrooming(Experiment):
                 if 'Trial' not in item:
                     continue
 
-                GroomingSummary(session_id=session.session_id,
-                                scored_session_dir=str(score_sheet_path),
-                                trial_num=int(item.strip('Trial')),
-                                trial_length=score_sheet['Total session time (m)'][item],
-                                latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
-                                num_bouts=score_sheet["Number of Bouts"][item],
-                                total_time_grooming=score_sheet["Total Time DlxGrooming (s)"][item],
-                                num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
-                                num_chains=score_sheet["Number of Chains"][item],
-                                num_complete_chains=score_sheet["Number of Complete Chains"][item],
-                                avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
+                GroomingTrial(session_id=session.session_id,
+                              scored_session_dir=str(score_sheet_path),
+                              trial_num=int(item.strip('Trial')),
+                              trial_length=score_sheet['Total session time (m)'][item],
+                              latency_to_onset=score_sheet["Latency to grooming onset (s)"][item],
+                              num_bouts=score_sheet["Number of Bouts"][item],
+                              total_time_grooming=score_sheet["Total Time DlxGrooming (s)"][item],
+                              num_interrupted_bouts=score_sheet["Number of Interrupted Bouts"][item],
+                              num_chains=score_sheet["Number of Chains"][item],
+                              num_complete_chains=score_sheet["Number of Complete Chains"][item],
+                              avg_time_per_bout=score_sheet["Average Time Per Bout (s)"][item]).add_to_db()
 
     def _update_grooming_bouts_and_chains(self):
         # noinspection PyTypeChecker
@@ -841,8 +841,8 @@ class DlxGrooming(Experiment):
                 else:
                     trial_num += 1
 
-                grooming_summary = GroomingSummary.query.filter_by(session_id=session.session_id,
-                                                                   trial_num=trial_num).first()
+                grooming_summary = GroomingTrial.query.filter_by(session_id=session.session_id,
+                                                                 trial_num=trial_num).first()
                 if grooming_summary is None:
                     continue
 
@@ -878,7 +878,7 @@ class DlxGrooming(Experiment):
                         else:
                             print('figure this case out')
 
-                    GroomingBout(grooming_summary_id=grooming_summary.grooming_summary_id,
+                    GroomingBout(grooming_summary_id=grooming_summary.grooming_trial_id,
                                  session_id=session.session_id,
                                  bout_string=bout_sequence,
                                  bout_start=int(bout_start_frame),

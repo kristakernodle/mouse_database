@@ -1,4 +1,4 @@
-from database_pkg import Experiment, GroomingSummary, Mouse
+from database_pkg import Experiment, GroomingTrial, Mouse
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -15,7 +15,7 @@ for session in exp.sessions:
 
     total_time_grooming = 0
     num_bouts = 0
-    for groom_sum in GroomingSummary.query.filter_by(session_id=session.session_id).all():
+    for groom_sum in GroomingTrial.query.filter_by(session_id=session.session_id).all():
         total_time_grooming += groom_sum.total_time_grooming
         num_bouts += groom_sum.num_bouts
 

@@ -3,7 +3,7 @@ from .extensions import db
 from .utilities import Date
 from .Models import (PastaHandlingScores,
                      GroomingBout,
-                     GroomingSummary,
+                     GroomingTrial,
                      SRTrialScore,
                      BlindTrial,
                      Trial,
@@ -19,7 +19,7 @@ from .Models import (PastaHandlingScores,
                      DlxGrooming,
                      DlxPastaHandling,
                      DYT1SkilledReaching,
-                     DlxChatSapSkilledReaching,)
+                     DlxChatSapSkilledReaching, )
 from config import config
 from .blind_review import create_blind_folders
 

@@ -12,7 +12,7 @@ from database_pkg import (db,
                           BlindFolder,
                           SRTrialScore,
                           GroomingBout,
-                          GroomingSummary,
+                          GroomingTrial,
                           PastaHandlingScores)
 
 
@@ -44,7 +44,7 @@ def rebuild_database(back_up_dir):
     BlindFolder.reinstate(blind_folders_full_path)
     BlindTrial.reinstate(blind_trials_full_path)
     SRTrialScore.reinstate(sr_trial_scores_full_path)
-    GroomingSummary.reinstate(grooming_summary_full_path)
+    GroomingTrial.reinstate(grooming_summary_full_path)
     GroomingBout.reinstate(grooming_bouts_full_path)
     PastaHandlingScores.reinstate(pasta_handling_scores_full_path)
 
