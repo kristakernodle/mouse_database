@@ -775,7 +775,7 @@ class DlxGrooming(Experiment):
     def _update_chains(self, bout: GroomingBout, all_bout_chains):
         all_bout_chains = all_bout_chains.reset_index(drop=True)
         for idx, chain_row in all_bout_chains.iterrows():
-            duration = int(chain_row['end frame']) - chain_row['start frame']/100
+            duration = (int(chain_row['end frame']) - int(chain_row['start frame']))/100
             complete = False
             if '4' in chain_row['chain choreography']:
                 complete = True
@@ -938,7 +938,7 @@ class DlxGrooming(Experiment):
                     idx_all_bout_end = bouts_df['Description'].loc[lambda x: x == 'bout end'].index.to_list()
                     all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
 
-                    total_time_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
+                    total_frames_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
                     num_bouts = len(all_bout_start_rows)
 
                     num_chains = all_bout_start_rows['Chains'].sum()
@@ -949,12 +949,12 @@ class DlxGrooming(Experiment):
 
                     if grooming_trial is None:
                         GroomingTrial(session_id=session.session_id,
-                                       scored_session_dir=session.session_dir,
-                                       trial_num=trial_num+1,
-                                       total_time_grooming=total_time_grooming.item()/100,
-                                       num_bouts=num_bouts,
-                                       num_chains=num_chains.item(),
-                                       num_complete_chains=num_complete_chains.item()).add_to_db()
+                                      scored_session_dir=session.session_dir,
+                                      trial_num=trial_num+1,
+                                      total_time_grooming=total_frames_grooming.item() / 100,
+                                      num_bouts=num_bouts,
+                                      num_chains=num_chains.item(),
+                                      num_complete_chains=num_complete_chains.item()).add_to_db()
 
                         grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
                                                                        trial_num=trial_num+1).first()
@@ -966,7 +966,7 @@ class DlxGrooming(Experiment):
 
                 trial_start_row = bouts_df.iloc[trial_start_idx]
                 trial_end_row = bouts_df.iloc[trial_end_idx]
-                all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx-1]
+                all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx]
 
                 idx_all_bout_start = all_trial_rows['Description'].loc[lambda x: x == 'bout start'].index.to_list()
                 all_bout_start_rows = bouts_df.iloc[idx_all_bout_start]
@@ -974,13 +974,34 @@ class DlxGrooming(Experiment):
                 idx_all_bout_end = all_trial_rows['Description'].loc[lambda x: x == 'bout end'].index.to_list()
                 all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
 
-                trial_length = (trial_end_row['Frame Number'] - trial_start_row['Frame Number']) / 100
-                total_time_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
                 try:
-                    latency_to_onset = (bouts_df.iloc[idx_all_bout_start[0]]['Frame Number'] -
-                                    trial_start_row['Frame Number']) / 100
-                except IndexError:
-                    breakpoint()
+                    idx_video_end = all_trial_rows['Description'].loc[lambda x: x == 'video end'].index.item()
+                    row_video_end = bouts_df.iloc[idx_video_end]
+                    trial_length = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] + trial_end_row['Frame Number']) / 100
+                except ValueError:
+                    trial_length = (trial_end_row['Frame Number'] - trial_start_row['Frame Number']) / 100
+
+                total_frames_grooming = (all_bout_end_rows['Frame Number'].sum() -
+                                         all_bout_start_rows['Frame Number'].sum())
+                idx_all_bout_continue = all_trial_rows['Description'].loc[
+                    lambda x: x == 'bout continue'].index.to_list()
+                if len(idx_all_bout_continue) > 0:
+                    for continue_idx in idx_all_bout_continue:
+                        rows_before_continue = bouts_df.iloc[trial_start_idx+1:continue_idx]
+                        idx_video_end = rows_before_continue['Description'].loc[lambda x: x == 'video end'].index.item()
+                        row_video_end = bouts_df.iloc[idx_video_end]
+                        total_frames_grooming += row_video_end['Frame Number']
+
+                try:
+                    rows_trial_start_first_bout = bouts_df.iloc[trial_start_idx+1:idx_all_bout_start[0]]
+                    idx_video_end = rows_trial_start_first_bout['Description'].loc[lambda x: x == 'video end'].index.item()
+                    row_video_end = bouts_df.iloc[idx_video_end]
+                    latency_to_onset = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] +
+                                        bouts_df.loc[idx_all_bout_start[0]]['Frame Number']) / 100
+                except ValueError:
+                    latency_to_onset = (bouts_df.loc[idx_all_bout_start[0]]['Frame Number'] -
+                                        trial_start_row['Frame Number']) / 100
+
                 num_bouts = len(all_bout_start_rows)
 
                 num_chains = all_bout_start_rows['Chains'].sum()
@@ -990,14 +1011,14 @@ class DlxGrooming(Experiment):
                                                                trial_num=trial_num+1).first()
                 if grooming_trial is None:
                     GroomingTrial(session_id=session.session_id,
-                                   scored_session_dir=session.session_dir,
-                                   trial_num=trial_num+1,
-                                   trial_length=trial_length,
-                                   total_time_grooming=total_time_grooming.item()/100,
-                                   latency_to_onset=latency_to_onset,
-                                   num_bouts=num_bouts,
-                                   num_chains=num_chains.item(),
-                                   num_complete_chains=num_complete_chains.item()).add_to_db()
+                                  scored_session_dir=session.session_dir,
+                                  trial_num=trial_num+1,
+                                  trial_length=trial_length,
+                                  total_time_grooming=total_frames_grooming.item() / 100,
+                                  latency_to_onset=latency_to_onset,
+                                  num_bouts=num_bouts,
+                                  num_chains=num_chains.item(),
+                                  num_complete_chains=num_complete_chains.item()).add_to_db()
 
                     grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
                                                                    trial_num=trial_num+1).first()
