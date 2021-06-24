@@ -24,6 +24,15 @@ class GroomingBout(Base):
 
     chains = relationship("GroomingChain", backref='grooming_bouts')
 
+    def is_same(self, new_bout):
+        return all([self.grooming_trial_id == new_bout.grooming_trial_id,
+                    self.bout_string == new_bout.bout_string,
+                    self.start_frame == new_bout.start_frame,
+                    self.end_frame == new_bout.end_frame,
+                    self.bout_length == new_bout.bout_length,
+                    self.num_chains == new_bout.num_chains,
+                    self.num_complete_chains == new_bout.num_complete_chains])
+
     # def __init__(self, grooming_summary_id, session_id, bout_string, bout_start, bout_end,
     #              grooming_bout_id=None, interrupted=None, complete=None, num_chains=None, total_num_transitions=None,
     #              num_incorrect_transitions=None, correct_transitions=None, aborted_transitions=None,

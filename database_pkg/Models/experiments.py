@@ -800,7 +800,7 @@ class DlxGrooming(Experiment):
                     else:
                         skips += 1
             chain = GroomingChain.query.filter_by(grooming_trial_id=bout.grooming_trial_id,
-                                                  chain_string=chain_row['chain choreography']).first()
+                                                  start_frame=chain_row['start frame']).first()
             if chain is None:
                 GroomingChain(grooming_bout_id=bout.grooming_bout_id,
                               grooming_trial_id=bout.grooming_trial_id,
@@ -829,28 +829,24 @@ class DlxGrooming(Experiment):
         chain_idx = 0
         for idx, trial_row in all_trial_rows.iterrows():
 
-            if trial_row['Description'] in ['video start', 'video end']:
+            if trial_row['Description'].strip() in ['video start', 'video end']:
                 continue
-            elif trial_row['Description'] == 'bout start' and new_bout is None:
-                if isnan(trial_row['Complete Chains']):
-                    trial_row['Complete Chains'] = trial_row['Complete Chain']
-                if isnan(trial_row['Chains']):
-                    trial_row['Chains'] = trial_row['Chain']
+            elif trial_row['Description'].strip() == 'bout start' and new_bout is None:
                 new_bout = GroomingBout(grooming_trial_id=grooming_trial.grooming_trial_id,
                                         bout_string=trial_row['Sequence'],
                                         start_frame=trial_row['Frame Number'],
                                         bout_length=0,
                                         num_chains=int(trial_row['Chains']),
                                         num_complete_chains=int(trial_row['Complete Chains']))
-            elif trial_row['Description'] == 'bout continue' and new_bout is not None:
-                [idx_video_end] = all_trial_rows['Description'].loc[lambda x: x == 'video end'].index.to_list()
+            elif trial_row['Description'].strip() == 'bout continue' and new_bout is not None:
+                [idx_video_end] = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'video end'].index.to_list()
                 video_end = all_trial_rows.iloc[idx_video_end]
                 new_bout.bout_length += video_end['Frame Number'] - new_bout.start_frame
                 new_bout.bout_string = '-'.join([new_bout.bout_string, trial_row['Sequence']])
                 new_bout.num_chains += int(trial_row['Chains'])
                 new_bout.num_complete_chains += int(trial_row['Complete Chains'])
                 continued_flag = True
-            elif trial_row['Description'] == 'bout end' and new_bout is not None:
+            elif trial_row['Description'].strip() == 'bout end' and new_bout is not None:
                 new_bout.end_frame = trial_row['Frame Number']
                 if continued_flag:
                     new_bout.bout_length = (new_bout.bout_length + new_bout.end_frame) / 100
@@ -861,15 +857,22 @@ class DlxGrooming(Experiment):
                                                     bout_string=new_bout.bout_string).first()
                 if bout is None:
                     new_bout.add_to_db()
-                    bout = GroomingBout.query.filter_by(grooming_trial_id=grooming_trial.grooming_trial_id,
-                                                        bout_string=new_bout.bout_string).first()
+                elif not new_bout.is_same(bout):
+                    bout.bout_string = new_bout.bout_string
+                    bout.start_frame = new_bout.start_frame
+                    bout.end_frame = new_bout.end_frame
+                    bout.bout_length = new_bout.bout_length
+                    bout.num_chains = new_bout.num_chains
+                    bout.num_complete_chains = new_bout.num_complete_chains
+                    bout.add_to_db()
+
                 bout = GroomingBout.query.filter_by(grooming_trial_id=new_bout.grooming_trial_id,
                                                     bout_string=new_bout.bout_string).first()
                 new_bout = None
                 continued_flag = False
 
                 if bout.num_chains > 0:
-                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(bout.num_chains)])
+                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(chain_idx) + int(bout.num_chains)])
                     chain_idx += bout.num_chains
 
     def _update_grooming_trials(self):
@@ -968,14 +971,17 @@ class DlxGrooming(Experiment):
                 trial_end_row = bouts_df.iloc[trial_end_idx]
                 all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx]
 
-                idx_all_bout_start = all_trial_rows['Description'].loc[lambda x: x == 'bout start'].index.to_list()
+                idx_all_bout_start = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'bout start'].index.to_list()
                 all_bout_start_rows = bouts_df.iloc[idx_all_bout_start]
 
-                idx_all_bout_end = all_trial_rows['Description'].loc[lambda x: x == 'bout end'].index.to_list()
+                idx_all_bout_end = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'bout end'].index.to_list()
                 all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
 
+                if len(all_bout_start_rows) != len(all_bout_end_rows):
+                    breakpoint()
+
                 try:
-                    idx_video_end = all_trial_rows['Description'].loc[lambda x: x == 'video end'].index.item()
+                    idx_video_end = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
                     row_video_end = bouts_df.iloc[idx_video_end]
                     trial_length = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] + trial_end_row['Frame Number']) / 100
                 except ValueError:
@@ -984,17 +990,17 @@ class DlxGrooming(Experiment):
                 total_frames_grooming = (all_bout_end_rows['Frame Number'].sum() -
                                          all_bout_start_rows['Frame Number'].sum())
                 idx_all_bout_continue = all_trial_rows['Description'].loc[
-                    lambda x: x == 'bout continue'].index.to_list()
+                    lambda x: x.str.strip() == 'bout continue'].index.to_list()
                 if len(idx_all_bout_continue) > 0:
                     for continue_idx in idx_all_bout_continue:
                         rows_before_continue = bouts_df.iloc[trial_start_idx+1:continue_idx]
-                        idx_video_end = rows_before_continue['Description'].loc[lambda x: x == 'video end'].index.item()
+                        idx_video_end = rows_before_continue['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
                         row_video_end = bouts_df.iloc[idx_video_end]
                         total_frames_grooming += row_video_end['Frame Number']
 
                 try:
                     rows_trial_start_first_bout = bouts_df.iloc[trial_start_idx+1:idx_all_bout_start[0]]
-                    idx_video_end = rows_trial_start_first_bout['Description'].loc[lambda x: x == 'video end'].index.item()
+                    idx_video_end = rows_trial_start_first_bout['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
                     row_video_end = bouts_df.iloc[idx_video_end]
                     latency_to_onset = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] +
                                         bouts_df.loc[idx_all_bout_start[0]]['Frame Number']) / 100
