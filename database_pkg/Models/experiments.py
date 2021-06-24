@@ -820,13 +820,12 @@ class DlxGrooming(Experiment):
                               num_atypical_end=atypical_end
                               ).add_to_db()
 
-    def _update_bouts(self, grooming_trial, all_trial_rows, all_trial_chains):
+    def _update_bouts(self, grooming_trial, all_trial_rows, all_trial_chains, chain_idx):
         all_trial_rows = all_trial_rows.reset_index(drop=True)
         all_trial_chains = all_trial_chains.reset_index(drop=True)
 
         new_bout = None
         continued_flag = False
-        chain_idx = 0
         for idx, trial_row in all_trial_rows.iterrows():
 
             if trial_row['Description'].strip() in ['video start', 'video end']:
@@ -962,11 +961,11 @@ class DlxGrooming(Experiment):
                         grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
                                                                        trial_num=trial_num+1).first()
 
-                    self._update_bouts(grooming_trial, bouts_df, chains_df.iloc[int(chain_idx):int(num_chains)])
-                    chain_idx += num_chains
+                    self._update_bouts(grooming_trial, bouts_df, chains_df.iloc[int(chain_idx):int(num_chains)], chain_idx)
+                    chain_idx += num_chains.item()
 
             for trial_num, [trial_start_idx, trial_end_idx] in enumerate(all_trial_idx):
-
+                chain_idx = 0
                 trial_start_row = bouts_df.iloc[trial_start_idx]
                 trial_end_row = bouts_df.iloc[trial_end_idx]
                 all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx]
@@ -1029,7 +1028,7 @@ class DlxGrooming(Experiment):
                     grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
                                                                    trial_num=trial_num+1).first()
 
-                self._update_bouts(grooming_trial, all_trial_rows, chains_df.iloc[int(chain_idx):int(num_chains)])
+                self._update_bouts(grooming_trial, all_trial_rows, chains_df.iloc[int(chain_idx):int(num_chains)], chain_idx)
                 chain_idx += num_chains
 
     def update_from_dirs(self):
