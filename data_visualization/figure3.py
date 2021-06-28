@@ -1,219 +1,207 @@
-from database_pkg import Experiment, GroomingTrial, Mouse
-import numpy as np
+import database_pkg as dbpkg
 import pandas as pd
-from scipy import stats
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.patches import Patch
+from datetime import date
 
-exp = Experiment.get_by_name('dlxCKO-grooming')
+today_str = dbpkg.Date(date.today().strftime('%Y%m%d')).yyyymmdd
 
-data_by_bout = list()
 
-for session in exp.sessions:
+def genotype_cleanup(df_row):
+    if df_row['genotype'] == 'Dlx-CKO Control':
+        return 'Control'
+    else:
+        return 'Dlx-CKO'
 
-    mouse = Mouse.query.get(session.mouse_id)
 
-    total_time_grooming = 0
-    num_bouts = 0
-    for groom_sum in GroomingTrial.query.filter_by(session_id=session.session_id).all():
-        total_time_grooming += groom_sum.total_time_grooming
-        num_bouts += groom_sum.num_bouts
+custom_colors = {'Dlx-CKO Control': "#005AB5", "Dlx-CKO": "#DC3220"}
 
-        for bout in groom_sum.bouts:
-            data_by_bout.append({'bout_id': bout.grooming_bout_id,
-                                 'session_id': session.session_id,
-                                 'genotype': mouse.genotype,
-                                 'bout_time': (bout.end_frame - bout.start_frame) / 100,
-                                 'total_transitions': bout.total_num_transitions,
-                                 'total_incorrect_transitions': bout.num_incorrect_transitions,
-                                 'num_initiation_incorrect_transitions': sum(
-                                    bout.initiation_incorrect_transitions.values()),
-                                 'num_skipped_transitions': sum(
-                                    bout.skipped_transitions.values()),
-                                 'num_reversed_transitions': sum(
-                                    bout.reversed_transitions.values()),
-                                 'num_aborted_transitions': sum(
-                                    bout.aborted_transitions.values())
-                                 })
+exp = dbpkg.Experiment.get_by_name('dlxCKO-grooming')
 
-by_bout_df = pd.DataFrame.from_records(data_by_bout)
+bouts_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
+                                              dbpkg.Mouse.eartag,
+                                              dbpkg.Mouse.sex,
+                                              dbpkg.Mouse.birthdate,
+                                              dbpkg.Mouse.genotype,
+                                              dbpkg.Session.session_id,
+                                              dbpkg.Session.session_date,
+                                              dbpkg.Session.session_dir,
+                                              dbpkg.Session.session_num,
+                                              dbpkg.GroomingTrial.grooming_trial_id,
+                                              dbpkg.GroomingTrial.trial_num,
+                                              dbpkg.GroomingBout.grooming_bout_id,
+                                              dbpkg.GroomingBout.bout_length) \
+                       .join(dbpkg.Session, dbpkg.Session.mouse_id == dbpkg.Mouse.mouse_id) \
+                       .join(dbpkg.GroomingTrial, dbpkg.GroomingTrial.session_id == dbpkg.Session.session_id) \
+                       .join(dbpkg.GroomingBout,
+                             dbpkg.GroomingBout.grooming_trial_id == dbpkg.GroomingTrial.grooming_trial_id) \
+                       .statement,
+                       dbpkg.db.session.bind)
 
-prop_by_bout_df = by_bout_df
-prop_by_bout_df['prop_initiation_incorrect_transitions'] = by_bout_df['num_initiation_incorrect_transitions'] / \
-                                                            by_bout_df['total_incorrect_transitions']
-prop_by_bout_df['prop_skipped_transitions'] = by_bout_df['num_skipped_transitions'] / \
-                                                            by_bout_df['total_incorrect_transitions']
-prop_by_bout_df['prop_reversed_transitions'] = by_bout_df['num_reversed_transitions'] / \
-                                                            by_bout_df['total_incorrect_transitions']
-prop_by_bout_df['prop_aborted_transitions'] = by_bout_df['num_aborted_transitions'] / \
-                                                            by_bout_df['total_incorrect_transitions']
+bouts_df['bout_duration'] = bouts_df['bout_length']
 
-agg_by_bout = prop_by_bout_df.groupby("genotype").agg([np.mean, stats.sem])
-agg_by_bout_tp = agg_by_bout.transpose().reset_index()
-agg_by_bout_plot = agg_by_bout_tp.rename(
-    columns={"level_0": 'measure', 'level_1': 'statistic', 'Dlx-CKO Control': 'control', 'Dlx-CKO': 'knockout'})
+temp_bouts_df = bouts_df
+temp_bouts_df['genotype'] = temp_bouts_df.apply(lambda x: genotype_cleanup(x), axis=1)
+temp_bouts_df.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_bouts_{today_str}.csv')
+bouts_mean_sem = bouts_df.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+bouts_mean_sem_transpose = bouts_mean_sem.transpose().reset_index()
 
-bout_mean_plot_dict = {'bout_time': {'ctrl_mean': None, 'ko_mean': None},
-                       'total_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'total_incorrect_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_initiation_incorrect_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_skipped_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_reversed_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_aborted_transitions': {'ctrl_mean': None, 'ko_mean': None}}
-bout_sem_plot_dict = {'bout_time': {'ctrl_sem': None, 'ko_sem': None},
-                      'total_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'total_incorrect_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_initiation_incorrect_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_skipped_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_reversed_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_aborted_transitions': {'ctrl_sem': None, 'ko_sem': None}}
-for index, row in agg_by_bout_plot.iterrows():
-    if row.measure not in bout_mean_plot_dict.keys():
-        continue
-    if row.statistic == 'mean':
-        bout_mean_plot_dict[row.measure]['ctrl_mean'] = row.control
-        bout_mean_plot_dict[row.measure]['ko_mean'] = row.knockout
-    elif row.statistic == 'sem':
-        bout_sem_plot_dict[row.measure]['ctrl_sem'] = row.control
-        bout_sem_plot_dict[row.measure]['ko_sem'] = row.knockout
+trials_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
+                                               dbpkg.Mouse.eartag,
+                                               dbpkg.Mouse.sex,
+                                               dbpkg.Mouse.birthdate,
+                                               dbpkg.Mouse.genotype,
+                                               dbpkg.Session.session_id,
+                                               dbpkg.Session.session_date,
+                                               dbpkg.Session.session_dir,
+                                               dbpkg.Session.session_num,
+                                               dbpkg.GroomingTrial.grooming_trial_id,
+                                               dbpkg.GroomingTrial.trial_num,
+                                               dbpkg.GroomingTrial.trial_length,
+                                               dbpkg.GroomingTrial.total_time_grooming,
+                                               dbpkg.GroomingTrial.latency_to_onset,
+                                               dbpkg.GroomingTrial.num_bouts,
+                                               dbpkg.GroomingTrial.num_chains,
+                                               dbpkg.GroomingTrial.num_complete_chains,
+                                               ) \
+                        .join(dbpkg.Session, dbpkg.Session.mouse_id == dbpkg.Mouse.mouse_id) \
+                        .join(dbpkg.GroomingTrial, dbpkg.GroomingTrial.session_id == dbpkg.Session.session_id) \
+                        .statement,
+                        dbpkg.db.session.bind)
 
-bout_mean_plot_df = pd.DataFrame.from_records(bout_mean_plot_dict).transpose().reset_index()
-bout_mean_plot_df.rename(columns={'index': 'measure'}, inplace=True)
-bout_sem_plot_df = pd.DataFrame.from_records(bout_sem_plot_dict).transpose().reset_index()
-bout_sem_plot_df.rename(columns={'index': 'measure'}, inplace=True)
+temp_trials_df = trials_df
+temp_trials_df['genotype'] = temp_trials_df.apply(lambda x: genotype_cleanup(x), axis=1)
+temp_trials_df.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_trials_{today_str}.csv')
 
-mean_time_grooming_bout = bout_mean_plot_df[bout_mean_plot_df.measure == "bout_time"]
-sem_time_grooming_bout = bout_sem_plot_df[bout_sem_plot_df.measure == "bout_time"]
+trials_mean_sem = trials_df.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+trials_mean_sem_transpose = trials_mean_sem.transpose().reset_index()
 
-mean_total_incorrect_transitions_bout = bout_mean_plot_df[bout_mean_plot_df.measure == "total_incorrect_transitions"]
-sem_total_incorrect_transitions_bout = bout_sem_plot_df[bout_sem_plot_df.measure == "total_incorrect_transitions"]
+chains_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
+                                               dbpkg.Mouse.eartag,
+                                               dbpkg.Mouse.sex,
+                                               dbpkg.Mouse.birthdate,
+                                               dbpkg.Mouse.genotype,
+                                               dbpkg.Session.session_id,
+                                               dbpkg.Session.session_date,
+                                               dbpkg.Session.session_dir,
+                                               dbpkg.Session.session_num,
+                                               dbpkg.GroomingTrial.grooming_trial_id,
+                                               dbpkg.GroomingChain.grooming_chain_id,
+                                               dbpkg.GroomingChain.start_frame,
+                                               dbpkg.GroomingChain.end_frame,
+                                               dbpkg.GroomingChain.complete,
+                                               dbpkg.GroomingChain.grooming_phase_1,
+                                               dbpkg.GroomingChain.grooming_phase_2,
+                                               dbpkg.GroomingChain.grooming_phase_3,
+                                               dbpkg.GroomingChain.grooming_phase_4,
+                                               dbpkg.GroomingChain.num_transitions,
+                                               dbpkg.GroomingChain.num_atypical_transitions,
+                                               dbpkg.GroomingChain.num_skips,
+                                               dbpkg.GroomingChain.num_reverse,
+                                               dbpkg.GroomingChain.num_atypical_end) \
+                        .join(dbpkg.Session, dbpkg.Session.mouse_id == dbpkg.Mouse.mouse_id) \
+                        .join(dbpkg.GroomingTrial, dbpkg.GroomingTrial.session_id == dbpkg.Session.session_id) \
+                        .join(dbpkg.GroomingChain,
+                              dbpkg.GroomingChain.grooming_trial_id == dbpkg.GroomingTrial.grooming_trial_id) \
+                        .filter(dbpkg.Experiment.experiment_id == exp.experiment_id).statement,
+                        dbpkg.db.session.bind)
 
-mean_total_transitions_bout = bout_mean_plot_df[bout_mean_plot_df.measure == "total_transitions"]
-sem_total_transitions_bout = bout_sem_plot_df[bout_sem_plot_df.measure == "total_transitions"]
+chains_df.insert(chains_df.shape[1], 'duration_frames',
+                 chains_df['end_frame'] - chains_df['start_frame'])
+chains_df.insert(chains_df.shape[1], 'duration_seconds',
+                 chains_df['duration_frames'] / 100)
+chains_df.insert(chains_df.shape[1], 'proportion_atypicalTransitions',
+                 chains_df['num_atypical_transitions'] / chains_df['num_transitions'])
+chains_df.insert(chains_df.shape[1], 'proportion_skips',
+                 chains_df['num_skips'] / chains_df['num_atypical_transitions'])
+chains_df.insert(chains_df.shape[1], 'proportion_reverse',
+                 chains_df['num_reverse'] / chains_df['num_atypical_transitions'])
+chains_df.insert(chains_df.shape[1], 'proportion_atypical_end',
+                 chains_df['num_atypical_end'] / chains_df['num_atypical_transitions'])
 
-mean_incorrect_transitions_prop_bout = bout_mean_plot_df[bout_mean_plot_df.measure.isin(["prop_initiation_incorrect_transitions",
-                                                                                       "prop_skipped_transitions",
-                                                                                       "prop_reversed_transitions",
-                                                                                       "prop_aborted_transitions"])]
-sem_incorrect_transitions_prop_bout = bout_sem_plot_df[bout_sem_plot_df.measure.isin(["prop_initiation_incorrect_transitions",
-                                                                                       "prop_skipped_transitions",
-                                                                                       "prop_reversed_transitions",
-                                                                                       "prop_aborted_transitions"])]
-##
+chains_df['genotype'] = chains_df.apply(lambda x: genotype_cleanup(x), axis=1)
 
-num_bouts_per_session = by_bout_df.groupby(["session_id", 'genotype']).count()
-agg_num_bouts_per_session = num_bouts_per_session.groupby("genotype").agg([np.mean, stats.sem])
-agg_num_bouts_tp = agg_num_bouts_per_session.transpose().reset_index()
-agg_num_bouts_plot = agg_num_bouts_tp.rename(columns={'level_0': 'measure', 'level_1': 'statistic', 'Dlx-CKO': 'knockout', 'Dlx-CKO Control': 'control'})
+chains_mean_sem = chains_df.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+chains_mean_sem_transpose = chains_mean_sem.transpose().reset_index()
+chains_df.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_chains_{today_str}.csv')
 
-mean_num_bouts_dict = {'bout_id': {'ctrl_mean': None, 'ko_mean': None}}
-sem_num_bouts_dict = {'bout_id': {'ctrl_sem': None, 'ko_sem': None}}
+chains_only_df = pd.read_sql(dbpkg.db.session.query(
+    dbpkg.GroomingTrial.grooming_trial_id,
+    dbpkg.GroomingChain.grooming_chain_id,
+    dbpkg.GroomingChain.start_frame,
+    dbpkg.GroomingChain.end_frame,
+    dbpkg.GroomingChain.complete,
+    dbpkg.GroomingChain.grooming_phase_1,
+    dbpkg.GroomingChain.grooming_phase_2,
+    dbpkg.GroomingChain.grooming_phase_3,
+    dbpkg.GroomingChain.grooming_phase_4,
+    dbpkg.GroomingChain.num_transitions,
+    dbpkg.GroomingChain.num_atypical_transitions,
+    dbpkg.GroomingChain.num_skips,
+    dbpkg.GroomingChain.num_reverse,
+    dbpkg.GroomingChain.num_atypical_end) \
+                             .join(dbpkg.GroomingChain,
+                                   dbpkg.GroomingChain.grooming_trial_id == dbpkg.GroomingTrial.grooming_trial_id).statement,
+                             dbpkg.db.session.bind)
 
-for index, row in agg_num_bouts_plot.iterrows():
-    if row.measure not in mean_num_bouts_dict.keys():
-        continue
-    if row.statistic == 'mean':
-        mean_num_bouts_dict[row.measure]['ctrl_mean'] = row.control
-        mean_num_bouts_dict[row.measure]['ko_mean'] = row.knockout
-    elif row.statistic == 'sem':
-        sem_num_bouts_dict[row.measure]['ctrl_sem'] = row.control
-        sem_num_bouts_dict[row.measure]['ko_sem'] = row.knockout
+chains_only_df.insert(chains_only_df.shape[1], 'chain_duration',
+                      (chains_only_df['end_frame'] - chains_only_df['start_frame']) / 100)
+chains_by_trial_df = chains_only_df.groupby('grooming_trial_id').agg(sum)
+chains_by_trial_df = chains_by_trial_df.rename_axis('grooming_trial_id').reset_index()
 
-mean_num_bouts_plot_df = pd.DataFrame.from_records(mean_num_bouts_dict).transpose().reset_index()
-mean_num_bouts_plot_df.rename(columns={'index': 'measure'}, inplace=True)
-sem_num_bouts_plot_df = pd.DataFrame.from_records(sem_num_bouts_dict).transpose().reset_index()
-sem_num_bouts_plot_df.rename(columns={'index': 'measure'}, inplace=True)
+trials_with_chains = pd.merge(temp_trials_df, chains_by_trial_df, on=['grooming_trial_id'], how='left')
+trials_with_chains['chain_duration'] = trials_with_chains['chain_duration'].fillna(0)
+trials_with_chains.insert(trials_with_chains.shape[1], 'nonchain_duration',
+                          trials_with_chains['total_time_grooming'] - trials_with_chains['chain_duration'])
 
-agg_by_session = by_bout_df.groupby(["session_id", 'genotype']).agg(np.sum).reset_index()
-agg_by_session['prop_initiation_incorrect_transitions'] = agg_by_session['num_initiation_incorrect_transitions'] / \
-                                                          agg_by_session['total_incorrect_transitions']
-agg_by_session['prop_skipped_transitions'] = agg_by_session['num_skipped_transitions'] / \
-                                                          agg_by_session['total_incorrect_transitions']
-agg_by_session['prop_reversed_transitions'] = agg_by_session['num_reversed_transitions'] / \
-                                                          agg_by_session['total_incorrect_transitions']
-agg_by_session['prop_aborted_transitions'] = agg_by_session['num_aborted_transitions'] / \
-                                                          agg_by_session['total_incorrect_transitions']
+trials_with_chains.insert(trials_with_chains.shape[1], 'totalGrooming_percentTrial',
+                          (trials_with_chains['total_time_grooming'] / trials_with_chains['trial_length']) * 100)
 
-# statistics (transitions)
+trials_with_chains.insert(trials_with_chains.shape[1], 'nonChainGrooming_percentTotalGrooming',
+                          (trials_with_chains['nonchain_duration'] / trials_with_chains['total_time_grooming']) * 100)
 
-utest_initiation_incorrect = stats.mannwhitneyu(
-    x=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO Control']['prop_initiation_incorrect_transitions'],
-    y=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO']['prop_initiation_incorrect_transitions'], alternative='two-sided')
-utest_skipped = stats.mannwhitneyu(
-    x=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO Control']['prop_skipped_transitions'],
-    y=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO']['prop_skipped_transitions'], alternative='two-sided')
-utest_reversed = stats.mannwhitneyu(
-    x=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO Control']['prop_reversed_transitions'],
-    y=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO']['prop_reversed_transitions'], alternative='two-sided')
-utest_aborted = stats.mannwhitneyu(
-    x=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO Control']['prop_aborted_transitions'],
-    y=agg_by_session[agg_by_session['genotype'] == 'Dlx-CKO']['prop_aborted_transitions'], alternative='two-sided')
-ttest_total_transitions = stats.ttest_ind(
-    by_bout_df[by_bout_df['genotype'] == 'Dlx-CKO Control']['total_transitions'],
-    by_bout_df[by_bout_df['genotype'] == 'Dlx-CKO']['total_transitions'])
-ttest_incorrect_transitions = stats.ttest_ind(
-    by_bout_df[by_bout_df['genotype'] == 'Dlx-CKO Control']['total_incorrect_transitions'],
-    by_bout_df[by_bout_df['genotype'] == 'Dlx-CKO']['total_incorrect_transitions'], equal_var=False) # var_ctl=0.675, var_ko=0.595
+trials_with_chains.insert(trials_with_chains.shape[1], 'chainGrooming_percentTotalGrooming',
+                          (trials_with_chains['chain_duration'] / trials_with_chains['total_time_grooming']) * 100)
 
-agg_by_session = agg_by_session.groupby("genotype").agg([np.mean, stats.sem])
-agg_by_session_tp = agg_by_session.transpose().reset_index()
-agg_by_session_plot = agg_by_session_tp.rename(
-    columns={"level_0": 'measure', 'level_1': "statistic", 'Dlx-CKO Control': "control", 'Dlx-CKO': 'knockout'})
+trials_with_chains.insert(trials_with_chains.shape[1], 'chains_perMin',
+                          trials_with_chains['num_chains'] / (trials_with_chains['total_time_grooming'] / 60))
 
-session_mean_plot_dict = {'bout_time': {'ctrl_mean': None, 'ko_mean': None},
-                       'total_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'total_incorrect_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_initiation_incorrect_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_skipped_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_reversed_transitions': {'ctrl_mean': None, 'ko_mean': None},
-                       'prop_aborted_transitions': {'ctrl_mean': None, 'ko_mean': None}}
-session_sem_plot_dict = {'bout_time': {'ctrl_sem': None, 'ko_sem': None},
-                      'total_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'total_incorrect_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_initiation_incorrect_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_skipped_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_reversed_transitions': {'ctrl_sem': None, 'ko_sem': None},
-                      'prop_aborted_transitions': {'ctrl_sem': None, 'ko_sem': None}}
+trials_with_chains.insert(trials_with_chains.shape[1], 'chainGrooming_percentTrial',
+                          (trials_with_chains['chain_duration'] / (trials_with_chains['trial_length']) * 100))
 
-for index, row in agg_by_session_plot.iterrows():
-    if row.measure not in session_mean_plot_dict.keys():
-        continue
-    if row.statistic == 'mean':
-        session_mean_plot_dict[row.measure]['ctrl_mean'] = row.control
-        session_mean_plot_dict[row.measure]['ko_mean'] = row.knockout
-    elif row.statistic == 'sem':
-        session_sem_plot_dict[row.measure]['ctrl_sem'] = row.control
-        session_sem_plot_dict[row.measure]['ko_sem'] = row.knockout
+trials_with_chains.insert(trials_with_chains.shape[1], 'nonChainGrooming_percentTrial',
+                          (trials_with_chains['nonchain_duration'] / (trials_with_chains['trial_length']) * 100))
 
-session_mean_plot_df = pd.DataFrame.from_records(session_mean_plot_dict).transpose().reset_index()
-session_mean_plot_df.rename(columns={'index': 'measure'}, inplace=True)
-session_sem_plot_df = pd.DataFrame.from_records(session_sem_plot_dict).transpose().reset_index()
-session_sem_plot_df.rename(columns={'index': 'measure'}, inplace=True)
+trials_with_chains.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_chains_nonchains_{today_str}.csv')
+trials_with_chains_mean_sem = trials_with_chains.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+trials_with_chains_mean_sem_transpose = trials_with_chains_mean_sem.transpose().reset_index()
 
-mean_time_grooming_session = session_mean_plot_df[session_mean_plot_df.measure == "bout_time"]
-sem_time_grooming_session = session_sem_plot_df[session_sem_plot_df.measure == "bout_time"]
-
-# mean_total_incorrect_transitions_session = session_mean_plot_df[session_mean_plot_df.measure == "total_incorrect_transitions"]
-# sem_total_incorrect_transitions_session = session_sem_plot_df[session_sem_plot_df.measure == "total_incorrect_transitions"]
-#
-# mean_total_transitions_session = session_mean_plot_df[session_mean_plot_df.measure == "total_transitions"]
-# sem_total_transitions_session = session_sem_plot_df[session_sem_plot_df.measure == "total_transitions"]
-
-mean_incorrect_transitions_prop_session = session_mean_plot_df[session_mean_plot_df.measure.isin(["prop_initiation_incorrect_transitions",
-                                                                                       "prop_skipped_transitions",
-                                                                                       "prop_reversed_transitions",
-                                                                                       "prop_aborted_transitions"])]
-sem_incorrect_transitions_prop_session = session_sem_plot_df[session_sem_plot_df.measure.isin(["prop_initiation_incorrect_transitions",
-                                                                                       "prop_skipped_transitions",
-                                                                                       "prop_reversed_transitions",
-                                                                                       "prop_aborted_transitions"])]
-
-mean_total_transitions_bout = bout_mean_plot_df[bout_mean_plot_df.measure.isin(["total_transitions",
-                                                                                         "total_incorrect_transitions"])]
-sem_total_transitions_bout = bout_sem_plot_df[bout_sem_plot_df.measure.isin(["total_transitions",
-                                                                                      "total_incorrect_transitions"])]
 
 # Plotting
+
+
+def get_mean_sem(agg_df):
+    mean = agg_df.loc[agg_df['level_1'] == 'mean']
+    sem = agg_df.loc[agg_df['level_1'] == 'sem']
+    return mean, sem
+
+
+def format_ax(axis, ylim, yticks, ylabel, xticklabels, yticklabels=None, title=None, titleloc='center'):
+    if yticklabels is None:
+        yticklabels = yticks
+
+    axis.set_ylim(ylim[0], ylim[1])
+    axis.set_yticks(yticks)
+    axis.set_yticklabels(yticklabels)
+    axis.set_ylabel(ylabel)
+    axis.set_xticklabels(xticklabels, rotation='horizontal')
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.tick_params(axis='x', which='both', bottom=False, labelbottom=True)
+    axis.set_title(title, loc=titleloc)
+    return axis
+
 
 fig, ax = plt.subplots()
 w = 5.51181
@@ -222,216 +210,342 @@ fig.set_dpi(1000)
 cap_size = 4
 matplotlib.rcParams['font.family'] = "sans-serif"
 matplotlib.rcParams['font.sans-serif'] = "Arial"
+color_dict = {"Control": custom_colors["Dlx-CKO Control"],
+              "Dlx-CKO": custom_colors["Dlx-CKO"]}
+y_genotype = ['Control', 'Dlx-CKO']
 
-ax1 = plt.subplot2grid((2, 3), (0, 0))
-ax2 = plt.subplot2grid((2, 3), (0, 1))
-ax3 = plt.subplot2grid((2, 3), (0, 2))
-ax4 = plt.subplot2grid((2, 3), (1, 1), colspan=2)
-ax5 = plt.subplot2grid((2, 3), (1, 0))
+totalGrooming_ax = plt.subplot2grid((2, 4), (0, 0), colspan=2)
+# nonChainGrooming_ax = plt.subplot2grid((2, 4), (0, 1))
+chainInit_ax = plt.subplot2grid((2, 4), (0, 2))
+chainDuraion_ax = plt.subplot2grid((2, 4), (0, 3))
+allTransQuantity_ax = plt.subplot2grid((2, 4), (1, 0))
+atypicalTransQuantity_ax = plt.subplot2grid((2, 4), (1, 1))
+abnormalSyntaxType_ax = plt.subplot2grid((2, 4), (1, 2), colspan=2)
 
-mean_time_grooming_session.plot.bar(ax=ax1, y=['ctrl_mean', 'ko_mean'], color={"ctrl_mean": 'b', "ko_mean": 'r'},
-                                    yerr=[sem_time_grooming_session['ctrl_sem'], sem_time_grooming_session['ko_sem']],
-                                    capsize=cap_size, legend=False)
-ax1.set_ylim(0, 1000)
-ax1.set_yticks([0, 420, 840])
-ax1.set_yticklabels([0, 7, 14])
-ax1.set_ylabel('mean time (m)')
-ax1.set_xticklabels(['total grooming'], rotation='horizontal')
+# Total Grooming Time (Fig 3A)
+totalGrooming_percentTrial = trials_with_chains_mean_sem_transpose.loc[
+    trials_with_chains_mean_sem_transpose['level_0'] == 'totalGrooming_percentTrial']
+totalGrooming_percentTrial_mean, totalGrooming_percentTrial_sem = get_mean_sem(totalGrooming_percentTrial)
 
-line_y = [mean_time_grooming_session['ko_mean'].item() + sem_time_grooming_session['ko_sem'].item() + 75]*2
-line_x = [-0.125, 0.125]
+grooming_by_type_mean = trials_with_chains_mean_sem[[("nonChainGrooming_percentTrial", "mean"),
+                                                     ("chainGrooming_percentTrial", "mean")]]
+grooming_by_type_sem = trials_with_chains_mean_sem[[("nonChainGrooming_percentTrial", "sem"),
+                                                    ("chainGrooming_percentTrial", "sem")]]
+grooming_by_type_mean = grooming_by_type_mean.reset_index()
+grooming_by_type_sem = grooming_by_type_sem.reset_index()
 
-ax1.plot(line_x, line_y, color='black', linewidth=1.0)
-ax1.annotate('*', xy=(0, 835), xycoords='data', ha='center')
+ind = [0, 1]
+totalGrooming_ax.bar(ind,
+                          grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')],
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          hatch='//',
+                          edgecolor='w',
+                          linewidth=1)
+totalGrooming_ax.bar(ind,
+                          grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')],
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          fill=False,
+                          edgecolor='k',
+                          linewidth=1)
+totalGrooming_ax.bar(ind, grooming_by_type_mean[('chainGrooming_percentTrial', 'mean')],
+                          bottom=grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')],
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          edgecolor='k',
+                          linewidth=1)
 
+totalGrooming_ax.errorbar(x=-0.1,
+                          y=grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')][0],
+                          yerr=grooming_by_type_sem[('nonChainGrooming_percentTrial', 'sem')][0],
+                          ecolor='k')
+totalGrooming_ax.errorbar(x=0.1,
+                          y=grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')][0]+grooming_by_type_mean[('chainGrooming_percentTrial', 'mean')][0],
+                          yerr=grooming_by_type_sem[('chainGrooming_percentTrial', 'sem')][0],
+                          ecolor='k')
+totalGrooming_ax.errorbar(x=0.9,
+                          y=grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')][1],
+                          yerr=grooming_by_type_sem[('nonChainGrooming_percentTrial', 'sem')][1],
+                          ecolor='k')
+totalGrooming_ax.errorbar(x=1.1,
+                          y=grooming_by_type_mean[('nonChainGrooming_percentTrial', 'mean')][1]+grooming_by_type_mean[('chainGrooming_percentTrial', 'mean')][1],
+                          yerr=grooming_by_type_sem[('chainGrooming_percentTrial', 'sem')][1],
+                          ecolor='k')
+totalGrooming_ax.set_xticks([0, 1])
+totalGrooming_ax = format_ax(totalGrooming_ax,
+                             ylim=[0, 35],
+                             yticks=[10, 20, 30],
+                             ylabel='time spent\n(% of trial)',
+                             xticklabels=['Control', 'Dlx-CKO'],
+                             title='Grooming quantity',
+                             titleloc='center')
+legend_elements = [Patch(facecolor='k', edgecolor='w', label='chain'),
+                   Patch(facecolor='k', hatch='//', edgecolor='w', label = 'non-chain')]
+totalGrooming_ax.legend(handles=legend_elements, loc='upper left')
 
-mean_num_bouts_plot_df.plot.bar(ax=ax2, y=['ctrl_mean', 'ko_mean'],
-                                                  color={"ctrl_mean": 'b', "ko_mean": 'r'},
-                                                  yerr=[sem_num_bouts_plot_df['ctrl_sem'],
-                                                        sem_num_bouts_plot_df['ko_sem']],
-                                                  capsize=cap_size, legend=False)
-ax2.set_ylim(0, 38)
-ax2.set_yticks([0, 15, 30])
-ax2.set_yticklabels([0, 15, 30])
-ax2.set_ylabel('mean per session')
-ax2.set_xticklabels(['number of bouts'], rotation='horizontal')
+# # Non-Chain Grooming (Fig 3B)
+# nonChainGrooming_percentTotal = trials_with_chains_mean_sem_transpose.loc[
+#     trials_with_chains_mean_sem_transpose['level_0'] == 'nonChainGrooming_percentTotalGrooming']
+# nonChainGrooming_percentTotal_mean, nonChainGrooming_percentTotal_sem = get_mean_sem(nonChainGrooming_percentTotal)
+#
+# nonChainGrooming_percentTotal_mean.plot.bar(ax=nonChainGrooming_ax,
+#                                             y=y_genotype,
+#                                             color=color_dict,
+#                                             yerr=[nonChainGrooming_percentTotal_sem['Control'],
+#                                                   nonChainGrooming_percentTotal_sem['Dlx-CKO']],
+#                                             capsize=cap_size,
+#                                             legend=False)
+#
+# # line_y = [mean_time_grooming_session['ko_mean'].item() + sem_time_grooming_session['ko_sem'].item() + 75] * 2
+# # line_x = [-0.125, 0.125]
+# #
+# # totalGrooming_ax.plot(line_x, line_y, color='black', linewidth=1.0)
+# # totalGrooming_ax.annotate('*', xy=(0, 835), xycoords='data', ha='center')
+#
+# nonChainGrooming_ax = format_ax(nonChainGrooming_ax,
+#                                 ylim=[0, 100],
+#                                 yticks=[25, 50, 75, 100],
+#                                 ylabel='time spent\n(% of total grooming)',
+#                                 xticklabels=['non-chain'])
 
-line_y = [mean_num_bouts_plot_df['ko_mean'].item() + sem_num_bouts_plot_df['ko_sem'].item() + 2]*2
-line_x = [-0.125, 0.125]
+# Chains Initiated per Minute Grooming (Fig 3C)
+chains_perMin = trials_with_chains_mean_sem_transpose.loc[
+    trials_with_chains_mean_sem_transpose['level_0'] == 'chains_perMin']
+chains_perMin_mean, chains_perMin_sem = get_mean_sem(chains_perMin)
 
-ax2.plot(line_x, line_y, color='black', linewidth=1.0)
-ax2.annotate('*',
-             xy=(0, np.round(mean_num_bouts_plot_df['ko_mean'].item() + sem_num_bouts_plot_df['ko_sem'].item() + 2)),
-             xycoords='data',
-             ha='center')
+chains_perMin_mean.plot.bar(ax=chainInit_ax,
+                            y=y_genotype,
+                            color=color_dict,
+                            yerr=[chains_perMin_sem['Control'], chains_perMin_sem['Dlx-CKO']],
+                            capsize=cap_size,
+                            legend=False)
 
-mean_time_grooming_bout.plot.bar(ax=ax3, y=['ctrl_mean', 'ko_mean'], color={"ctrl_mean": 'b', "ko_mean": 'r'},
-                                    yerr=[sem_time_grooming_bout['ctrl_sem'], sem_time_grooming_bout['ko_sem']],
-                                    capsize=cap_size, legend=False)
-ax3.set_ylim(0, 38)
-ax3.set_yticks([0, 15, 30])
-ax3.set_yticklabels([0, 15, 30])
-ax3.set_ylabel('mean time (s)')
-ax3.set_xticklabels(['bout length'], rotation='horizontal')
+# line_y = [mean_num_bouts_plot_df['ko_mean'].item() + sem_num_bouts_plot_df['ko_sem'].item() + 2] * 2
+# line_x = [-0.125, 0.125]
 
-line_y = [mean_time_grooming_bout['ctrl_mean'].item() + sem_time_grooming_bout['ctrl_sem'].item() + 2]*2
-line_x = [-0.125, 0.125]
+chainInit_ax = format_ax(chainInit_ax,
+                         ylim=[0, 1.6],
+                         yticks=[0.5, 1, 1.5],
+                         ylabel='chain initiation\n(per min grooming)',
+                         xticklabels=['chains'])
 
-ax3.plot(line_x, line_y, color='black', linewidth=1.0)
-ax3.annotate('*',
-             xy=(0, np.round(mean_time_grooming_bout['ctrl_mean'].item() + sem_time_grooming_bout['ctrl_sem'].item() + 2)),
-             xycoords='data',
-             ha='center')
+# Chain Duration
+chain_duration = chains_mean_sem_transpose.loc[chains_mean_sem_transpose['level_0'] == 'duration_seconds']
+chain_duration_mean, chain_duration_sem = get_mean_sem(chain_duration)
 
+chain_duration_mean.plot.bar(ax=chainDuraion_ax,
+                             y=['Control', 'Dlx-CKO'],
+                             color={"Control": custom_colors["Dlx-CKO Control"], "Dlx-CKO": custom_colors["Dlx-CKO"]},
+                             yerr=[chain_duration_sem['Control'], chain_duration_sem['Dlx-CKO']],
+                             capsize=cap_size,
+                             legend=False)
 
-incorrect_transitions = ['prop_initiation_incorrect_transitions',
-              'prop_skipped_transitions',
-              'prop_reversed_transitions',
-              'prop_aborted_transitions']
+## Statistical significance line
+# line_y = [chain_duration_mean['Dlx-CKO Control'].item() + chain_duration_sem['Dlx-CKO Control'].item() + 2] * 2
+# line_x = [-0.125, 0.125]
+#
+# chainDuraion_ax.plot(line_x, line_y, color='black', linewidth=1.0)
+# chainDuraion_ax.annotate('*',
+#                       xy=(
+#              0, np.round(chain_duration_mean['Dlx-CKO Control'].item() + chain_duration_sem['Dlx-CKO Control'].item() + 2 + 2)),
+#                       xycoords='data',
+#                       ha='center')
 
-mapping = {transition: i for i, transition in enumerate(incorrect_transitions)}
-mean_key = mean_incorrect_transitions_prop_session.measure.map(mapping)
-mean_incorrect_transitions_prop_session = mean_incorrect_transitions_prop_session.iloc[mean_key.argsort()]
+chainDuraion_ax.set_ylim(0, 12)
+chainDuraion_ax.set_yticks([4, 6, 8, 12])
+chainDuraion_ax.set_yticklabels([4, 6, 8, 12])
+chainDuraion_ax.set_ylabel('seconds (per chain)')
+chainDuraion_ax.set_xticklabels(['chain duration'], rotation='horizontal')
+chainDuraion_ax.spines['top'].set_visible(False)
+chainDuraion_ax.spines['right'].set_visible(False)
+chainDuraion_ax.tick_params(axis='x', which='both', bottom=False)
 
-sem_key = sem_incorrect_transitions_prop_session.measure.map(mapping)
-sem_incorrect_transitions_prop_session = sem_incorrect_transitions_prop_session.iloc[sem_key.argsort()]
+# Total number of transitions per chain
 
-mean_incorrect_transitions_prop_session.plot.bar(ax=ax4, x='measure', y=['ctrl_mean', 'ko_mean'],
-                                                  color={"ctrl_mean": 'b', "ko_mean": 'r'},
-                                                  yerr=[sem_incorrect_transitions_prop_session['ctrl_sem'].to_list(),
-                                                        sem_incorrect_transitions_prop_session['ko_sem'].to_list()],
-                                                  capsize=cap_size)
-incorrect_initiation_yoffset = mean_incorrect_transitions_prop_session[
-                                   mean_incorrect_transitions_prop_session.measure
-                                   == 'prop_initiation_incorrect_transitions']['ko_mean'].item() \
-                               + sem_incorrect_transitions_prop_session[
-                                   sem_incorrect_transitions_prop_session.measure
-                                   == 'prop_initiation_incorrect_transitions']['ko_sem'].item() \
-                               + 0.05
-skipped_yoffset = mean_incorrect_transitions_prop_session[
-                                   mean_incorrect_transitions_prop_session.measure
-                                   == 'prop_skipped_transitions']['ctrl_mean'].item() \
-                               + sem_incorrect_transitions_prop_session[
-                                   sem_incorrect_transitions_prop_session.measure
-                                   == 'prop_skipped_transitions']['ctrl_sem'].item() \
-                               + 0.05
-reversed_yoffset = mean_incorrect_transitions_prop_session[
-                                   mean_incorrect_transitions_prop_session.measure
-                                   == 'prop_reversed_transitions']['ctrl_mean'].item() \
-                               + sem_incorrect_transitions_prop_session[
-                                   sem_incorrect_transitions_prop_session.measure
-                                   == 'prop_reversed_transitions']['ctrl_sem'].item() \
-                               + 0.05
-aborted_yoffset = mean_incorrect_transitions_prop_session[
-                                   mean_incorrect_transitions_prop_session.measure
-                                   == 'prop_aborted_transitions']['ko_mean'].item() \
-                               + sem_incorrect_transitions_prop_session[
-                                   sem_incorrect_transitions_prop_session.measure
-                                   == 'prop_aborted_transitions']['ko_sem'].item() \
-                               + 0.05
+numTrans_perChain = chains_mean_sem_transpose.loc[chains_mean_sem_transpose['level_0'] == 'num_transitions']
+numTrans_perChain_mean, numTrans_perChain_sem = get_mean_sem(numTrans_perChain)
 
-line_y_incorrect_initiation = [incorrect_initiation_yoffset]*2
-line_x_incorrect_initiation = [-0.125, 0.125]
+numTrans_perChain_mean.plot.bar(ax=allTransQuantity_ax,
+                                y=['Control', 'Dlx-CKO'],
+                                color={"Control": custom_colors["Dlx-CKO Control"],
+                                       "Dlx-CKO": custom_colors["Dlx-CKO"]},
+                                yerr=[numTrans_perChain_sem['Control'], numTrans_perChain_sem['Dlx-CKO']],
+                                capsize=cap_size,
+                                legend=False
+                                )
 
-line_y_skipped = [skipped_yoffset]*2
-line_x_skipped = [0.875, 1.125]
+allTransQuantity_ax.set_ylim(0, 4.25)
+allTransQuantity_ax.set_yticks([1, 2, 3, 4])
+allTransQuantity_ax.set_yticklabels([1, 2, 3, 4])
+allTransQuantity_ax.set_ylabel('number (per chain)')
+allTransQuantity_ax.set_xticklabels(['# transitions'], rotation='horizontal')
+allTransQuantity_ax.spines['top'].set_visible(False)
+allTransQuantity_ax.spines['right'].set_visible(False)
+allTransQuantity_ax.tick_params(axis='x', which='both', bottom=False)
 
-line_y_reversed = [reversed_yoffset]*2
-line_x_reversed = [1.875, 2.125]
+# Atypical transitions as a proportion of total transitions
 
-line_y_aborted = [aborted_yoffset]*2
-line_x_aborted = [2.875, 3.125]
+proportionAtypicalTrans_perChain = chains_mean_sem_transpose.loc[
+    chains_mean_sem_transpose['level_0'] == 'proportion_atypicalTransitions']
+proportionAtypicalTrans_perChain_mean, proportionAtypicalTrans_perChain_sem = get_mean_sem(
+    proportionAtypicalTrans_perChain)
 
-ax4.plot(line_x_incorrect_initiation, line_y_incorrect_initiation, color='black', linewidth=1.0)
-ax4.annotate('*',
-             xy=(0, incorrect_initiation_yoffset),
-             xycoords='data',
-             ha='center')
+proportionAtypicalTrans_perChain_mean.plot.bar(ax=atypicalTransQuantity_ax,
+                                               y=['Control', 'Dlx-CKO'],
+                                               color={"Control": custom_colors["Dlx-CKO Control"],
+                                                      "Dlx-CKO": custom_colors["Dlx-CKO"]},
+                                               yerr=[proportionAtypicalTrans_perChain_sem['Control'],
+                                                     proportionAtypicalTrans_perChain_sem['Dlx-CKO']],
+                                               capsize=cap_size,
+                                               legend=False)
 
-ax4.plot(line_x_skipped, line_y_skipped, color='black', linewidth=1.0)
-ax4.annotate('*',
-             xy=(1, skipped_yoffset),
-             xycoords='data',
-             ha='center')
+## significance bars
+# total_transitions_yoffset = mean_total_transitions_bout[
+#                                 mean_total_transitions_bout.measure
+#                                 == 'total_transitions']['ctrl_mean'].item() \
+#                             + sem_total_transitions_bout[
+#                                 sem_total_transitions_bout.measure
+#                                 == 'total_transitions']['ctrl_sem'].item() \
+#                             + 0.5
+# incorrect_transitions_yoffset = mean_total_transitions_bout[
+#                                     mean_total_transitions_bout.measure
+#                                     == 'total_incorrect_transitions']['ctrl_mean'].item() \
+#                                 + sem_total_transitions_bout[
+#                                     sem_total_transitions_bout.measure
+#                                     == 'total_incorrect_transitions']['ctrl_sem'].item() \
+#                                 + 0.5
+#
+# line_x_total_transitions = [-0.125, 0.125]
+# line_y_total_transitions = [total_transitions_yoffset] * 2
+#
+# line_x_incorrect_transitions = [0.875, 1.125]
+# line_y_incorrect_transitions = [incorrect_transitions_yoffset] * 2
+#
+# atypicalTransQuantity_ax.plot(line_x_total_transitions, line_y_total_transitions, color='black', linewidth=1.0)
+# atypicalTransQuantity_ax.annotate('*',
+#              xy=(0, total_transitions_yoffset),
+#              xycoords='data',
+#              ha='center')
+#
+# atypical_transitions_totalplot(line_x_incorrect_transitions, line_y_incorrect_transitions, color='black', linewidth=1.0)
+# atypicalTransQuantity_ax.annotate('*',
+#              xy=(1, incorrect_transitions_yoffset),
+#              xycoords='data',
+#              ha='center')
 
-ax4.plot(line_x_reversed, line_y_reversed, color='black', linewidth=1.0)
-ax4.annotate('*',
-             xy=(2, reversed_yoffset),
-             xycoords='data',
-             ha='center')
+atypicalTransQuantity_ax.set_ylim(0, 0.6)
+atypicalTransQuantity_ax.set_yticks([0.2, 0.4, 0.6])
+atypicalTransQuantity_ax.set_yticklabels([20, 40, 60])
+atypicalTransQuantity_ax.set_xticklabels(['# transitions'], rotation='horizontal')
+atypicalTransQuantity_ax.set_ylabel('atypical transitions\n(% of total transitions)')
+atypicalTransQuantity_ax.spines['top'].set_visible(False)
+atypicalTransQuantity_ax.spines['right'].set_visible(False)
+atypicalTransQuantity_ax.tick_params(axis='x', which='both', bottom=False)
 
-ax4.plot(line_x_aborted, line_y_aborted, color='black', linewidth=1.0)
-ax4.annotate('*',
-             xy=(3, aborted_yoffset),
-             xycoords='data',
-             ha='center')
+## Proportion Atypical Transitions Per Chain
+atypical_transitions = ['proportion_skips',
+                        'proportion_reverse',
+                        'proportion_atypical_end']
+proportionSkips = chains_mean_sem_transpose.loc[chains_mean_sem_transpose['level_0'] == 'proportion_skips']
+proportionReverse = chains_mean_sem_transpose.loc[chains_mean_sem_transpose['level_0'] == 'proportion_reverse']
+proportionAtypEnd = chains_mean_sem_transpose.loc[chains_mean_sem_transpose['level_0'] == 'proportion_atypical_end']
+atypicalTrans_segmented = pd.concat([proportionSkips, proportionReverse, proportionAtypEnd])
+atypicalTrans_segmented_mean, atypicalTrans_segmented_sem = get_mean_sem(atypicalTrans_segmented)
 
-ax4.set_ylim(0, 1)
-ax4.set_yticks([0, 0.5, 1])
-ax4.set_yticklabels(['0', '50', '100'])
-ax4.set_ylabel('% incorrect transitions')
-ax4.set_xticklabels(['incorrect\ninitiation', 'skipped', 'reversed', 'aborted'], rotation='horizontal')
-ax4.set_xlabel('incorrect transition type')
-handles, _ = ax4.get_legend_handles_labels()
+mapping = {transition: i for i, transition in enumerate(atypical_transitions)}
+mean_key = atypicalTrans_segmented_mean.level_0.map(mapping)
+mean_atypicalTrans_segmented_sorted = atypicalTrans_segmented_mean.iloc[mean_key.argsort()]
+sem_key = atypicalTrans_segmented_sem.level_0.map(mapping)
+sem_atypicalTrans_segmented_sorted = atypicalTrans_segmented_sem.iloc[sem_key.argsort()]
+
+mean_atypicalTrans_segmented_sorted.plot.bar(ax=abnormalSyntaxType_ax,
+                                             x='level_0',
+                                             y=y_genotype,
+                                             color=color_dict,
+                                             yerr=[sem_atypicalTrans_segmented_sorted['Control'].to_list(),
+                                                   sem_atypicalTrans_segmented_sorted['Dlx-CKO'].to_list()],
+                                             capsize=cap_size)
+
+## significance bars
+# incorrect_initiation_yoffset = mean_sem_atypical_transistions_sorted[
+#                                    mean_sem_atypical_transistions_sorted.measure
+#                                    == 'prop_initiation_incorrect_transitions']['ko_mean'].item() \
+#                                + sem_incorrect_transitions_prop_session[
+#                                    sem_incorrect_transitions_prop_session.measure
+#                                    == 'prop_initiation_incorrect_transitions']['ko_sem'].item() \
+#                                + 0.05
+# skipped_yoffset = mean_sem_atypical_transistions_sorted[
+#                       mean_sem_atypical_transistions_sorted.measure
+#                       == 'prop_skipped_transitions']['ctrl_mean'].item() \
+#                   + sem_incorrect_transitions_prop_session[
+#                       sem_incorrect_transitions_prop_session.measure
+#                       == 'prop_skipped_transitions']['ctrl_sem'].item() \
+#                   + 0.05
+# reversed_yoffset = mean_sem_atypical_transistions_sorted[
+#                        mean_sem_atypical_transistions_sorted.measure
+#                        == 'prop_reversed_transitions']['ctrl_mean'].item() \
+#                    + sem_incorrect_transitions_prop_session[
+#                        sem_incorrect_transitions_prop_session.measure
+#                        == 'prop_reversed_transitions']['ctrl_sem'].item() \
+#                    + 0.05
+# aborted_yoffset = mean_sem_atypical_transistions_sorted[
+#                       mean_sem_atypical_transistions_sorted.measure
+#                       == 'prop_aborted_transitions']['ko_mean'].item() \
+#                   + sem_incorrect_transitions_prop_session[
+#                       sem_incorrect_transitions_prop_session.measure
+#                       == 'prop_aborted_transitions']['ko_sem'].item() \
+#                   + 0.05
+#
+#
+# line_y_incorrect_initiation = [incorrect_initiation_yoffset] * 2
+# line_x_incorrect_initiation = [-0.125, 0.125]
+#
+# line_y_skipped = [skipped_yoffset] * 2
+# line_x_skipped = [0.875, 1.125]
+#
+# line_y_reversed = [reversed_yoffset] * 2
+# line_x_reversed = [1.875, 2.125]
+#
+# line_y_aborted = [aborted_yoffset] * 2
+# line_x_aborted = [2.875, 3.125]
+#
+# ax4.plot(line_x_incorrect_initiation, line_y_incorrect_initiation, color='black', linewidth=1.0)
+# ax4.annotate('*',
+#              xy=(0, incorrect_initiation_yoffset),
+#              xycoords='data',
+#              ha='center')
+#
+# ax4.plot(line_x_skipped, line_y_skipped, color='black', linewidth=1.0)
+# ax4.annotate('*',
+#              xy=(1, skipped_yoffset),
+#              xycoords='data',
+#              ha='center')
+#
+# ax4.plot(line_x_reversed, line_y_reversed, color='black', linewidth=1.0)
+# ax4.annotate('*',
+#              xy=(2, reversed_yoffset),
+#              xycoords='data',
+#              ha='center')
+#
+# ax4.plot(line_x_aborted, line_y_aborted, color='black', linewidth=1.0)
+# ax4.annotate('*',
+#              xy=(3, aborted_yoffset),
+#              xycoords='data',
+#              ha='center')
+
+abnormalSyntaxType_ax = format_ax(abnormalSyntaxType_ax,
+                                  ylim=[0, 0.8],
+                                  yticks=[0.25, 0.5, 0.75],
+                                  ylabel='proportion of transitions\n(% of atypical transitions)',
+                                  xticklabels=['skip', 'reverse', 'atypical end'],
+                                  yticklabels=[25, 50, 75],
+                                  title='Distribution of atypical transitions',
+                                  titleloc='left')
+
+handles, _ = abnormalSyntaxType_ax.get_legend_handles_labels()
 labels = ['control', 'Dlx-CKO']
-ax4.legend(handles, labels)
-ax4.get_legend().set_title(None)
-
-
-total_transitions = ['total_transitions',
-                     'total_incorrect_transitions']
-
-mapping_total_transitions = {transition: i for i, transition in enumerate(total_transitions)}
-mean_key_total_transitions = mean_total_transitions_bout.measure.map(mapping_total_transitions)
-mean_total_transitions_bout = mean_total_transitions_bout.iloc[mean_key_total_transitions.argsort()]
-
-sem_key_total_transitions = sem_total_transitions_bout.measure.map(mapping_total_transitions)
-sem_total_transitions_bout = sem_total_transitions_bout.iloc[sem_key_total_transitions.argsort()]
-
-mean_total_transitions_bout.plot.bar(ax=ax5, y=['ctrl_mean', 'ko_mean'], color={"ctrl_mean": 'b', "ko_mean": 'r'},
-                                    yerr=[sem_total_transitions_bout['ctrl_sem'].to_list(),
-                                          sem_total_transitions_bout['ko_sem'].to_list()],
-                                    capsize=cap_size, legend=False)
-
-total_transitions_yoffset = mean_total_transitions_bout[
-                                   mean_total_transitions_bout.measure
-                                   == 'total_transitions']['ctrl_mean'].item() \
-                               + sem_total_transitions_bout[
-                                   sem_total_transitions_bout.measure
-                                   == 'total_transitions']['ctrl_sem'].item() \
-                               + 0.5
-incorrect_transitions_yoffset = mean_total_transitions_bout[
-                                   mean_total_transitions_bout.measure
-                                   == 'total_incorrect_transitions']['ctrl_mean'].item() \
-                               + sem_total_transitions_bout[
-                                   sem_total_transitions_bout.measure
-                                   == 'total_incorrect_transitions']['ctrl_sem'].item() \
-                               + 0.5
-
-line_x_total_transitions = [-0.125, 0.125]
-line_y_total_transitions = [total_transitions_yoffset]*2
-
-line_x_incorrect_transitions = [0.875, 1.125]
-line_y_incorrect_transitions = [incorrect_transitions_yoffset]*2
-
-ax5.plot(line_x_total_transitions, line_y_total_transitions, color='black', linewidth=1.0)
-ax5.annotate('*',
-             xy=(0, total_transitions_yoffset),
-             xycoords='data',
-             ha='center')
-
-ax5.plot(line_x_incorrect_transitions, line_y_incorrect_transitions, color='black', linewidth=1.0)
-ax5.annotate('*',
-             xy=(1, incorrect_transitions_yoffset),
-             xycoords='data',
-             ha='center')
-
-ax5.set_ylim(0, 10)
-ax5.set_yticks([0, 3, 9])
-ax5.set_yticklabels([0, 3, 9])
-ax5.set_ylabel('mean per bout')
-ax5.set_xticklabels(['total', 'incorrect'], rotation='horizontal')
-ax5.set_xlabel('transitions')
+abnormalSyntaxType_ax.legend(handles, labels)
+abnormalSyntaxType_ax.set_xlabel(None)
+abnormalSyntaxType_ax.get_legend().set_title(None)
 
 plt.tight_layout()
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig3_20210506.pdf')
+plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig3_{today_str}.pdf')
+plt.close('all')

@@ -31,7 +31,7 @@ for grooming_summary in experiment.scored_grooming:
                      'num_bouts': grooming_summary.num_bouts,
                      'total_time_grooming': grooming_summary.total_time_grooming,
                      'num_interrupted_bouts': grooming_summary.num_interrupted_bouts,
-                     'num_chains': grooming_summary.num_chains,
+                     'chains_perMin': grooming_summary.chains_perMin,
                      'num_complete_chains': grooming_summary.num_complete_chains,
                      'avg_time_per_bout': grooming_summary.avg_time_per_bout
                      }
@@ -73,7 +73,7 @@ scipy.stats.ttest_ind(num_interrupted_bouts_ctrl["value"], num_interrupted_bouts
 # pvalue=0.0003962439771403303
 
 # number of chains
-num_chains = grooming_summary_df[grooming_summary_df["trial measure"].isin(["num_chains"])]
+num_chains = grooming_summary_df[grooming_summary_df["trial measure"].isin(["chains_perMin"])]
 num_chains_ctrl = num_chains[num_chains["genotype"].isin(['Dlx-CKO Control'])]
 num_chains_ko = num_chains[num_chains["genotype"].isin(['Dlx-CKO'])]
 scipy.stats.ttest_ind(num_chains_ctrl["value"], num_chains_ko["value"])
@@ -130,7 +130,7 @@ plt.close()
 
 #############
 
-g1 = sns.catplot(data=grooming_summary_df[grooming_summary_df["trial measure"].isin(["num_chains", "num_complete_chains"])],
+g1 = sns.catplot(data=grooming_summary_df[grooming_summary_df["trial measure"].isin(["chains_perMin", "num_complete_chains"])],
                 kind='bar',
                 x="trial measure",
                 y="value",
@@ -141,7 +141,7 @@ g1.ax.set_xticklabels(["All Chains", "Complete Chains"])
 g1.ax.set(xlabel='', ylabel="Number of Chains")
 g1.ax.set_title(f'DlxGrooming Chains by Genotype')
 plt.legend(title='Genotype')
-plt.savefig(str(Path(save_dir).joinpath('num_chains.jpeg')), bbox_inches='tight')
+plt.savefig(str(Path(save_dir).joinpath('chains_perMin.jpeg')), bbox_inches='tight')
 plt.close()
 
 #############

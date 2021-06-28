@@ -30,11 +30,11 @@ class GroomingBout(Base):
                     self.start_frame == new_bout.start_frame,
                     self.end_frame == new_bout.end_frame,
                     self.bout_length == new_bout.bout_length,
-                    self.num_chains == new_bout.num_chains,
+                    self.num_chains == new_bout.chains_perMin,
                     self.num_complete_chains == new_bout.num_complete_chains])
 
     # def __init__(self, grooming_summary_id, session_id, bout_string, bout_start, bout_end,
-    #              grooming_bout_id=None, interrupted=None, complete=None, num_chains=None, total_num_transitions=None,
+    #              grooming_bout_id=None, interrupted=None, complete=None, chains_perMin=None, total_num_transitions=None,
     #              num_incorrect_transitions=None, correct_transitions=None, aborted_transitions=None,
     #              skipped_transitions=None, reversed_transitions=None, initiation_incorrect_transitions=None):
     #
@@ -59,10 +59,10 @@ class GroomingBout(Base):
     #             else:
     #                 chain_strings.append(f"0-{temp_str}-0")
     #
-    #         self.num_chains = len(chain_strings)
+    #         self.chains_perMin = len(chain_strings)
     #
     #         self.interrupted = False
-    #         if self.num_chains > 1:
+    #         if self.chains_perMin > 1:
     #             self.interrupted = True
     #
     #         # Perform transition analysis of self.bout_string
@@ -120,7 +120,7 @@ class GroomingBout(Base):
     #         self.grooming_bout_id = grooming_bout_id
     #         self.interrupted = interrupted
     #         self.complete = complete
-    #         self.num_chains = num_chains
+    #         self.chains_perMin = chains_perMin
     #         self.total_num_transitions = total_num_transitions
     #         self.num_incorrect_transitions = num_incorrect_transitions
     #         self.correct_transitions = correct_transitions
@@ -147,7 +147,7 @@ class GroomingBout(Base):
         # grooming_bout_df = read_csv(full_path,
         #                             usecols=['grooming_bout_id', 'grooming_summary_id', 'session_id',
         #                                      'bout_string', 'start_frame', 'end_frame', 'interrupted', 'complete',
-        #                                      'num_chains', 'total_num_transitions', 'num_incorrect_transitions',
+        #                                      'chains_perMin', 'total_num_transitions', 'num_incorrect_transitions',
         #                                      'correct_transitions', 'aborted_transitions', 'skipped_transitions',
         #                                      'reversed_transitions', 'initiation_incorrect_transitions'],
         #                             delimiter=',',
@@ -159,7 +159,7 @@ class GroomingBout(Base):
         #                                    'end_frame': int,
         #                                    'interrupted': bool,
         #                                    'complete': bool,
-        #                                    'num_chains': int,
+        #                                    'chains_perMin': int,
         #                                    'total_num_transitions': int,
         #                                    'num_incorrect_transitions': str,
         #                                    'correct_transitions': str,
@@ -177,7 +177,7 @@ class GroomingBout(Base):
         #                      bout_end=grooming_bout_row['end_frame'],
         #                      interrupted=grooming_bout_row['interrupted'],
         #                      complete=grooming_bout_row['complete'],
-        #                      num_chains=grooming_bout_row['num_chains'],
+        #                      chains_perMin=grooming_bout_row['chains_perMin'],
         #                      total_num_transitions=grooming_bout_row['total_num_transitions'],
         #                      num_incorrect_transitions=grooming_bout_row['num_incorrect_transitions'],
         #                      correct_transitions=grooming_bout_row['correct_transitions'],

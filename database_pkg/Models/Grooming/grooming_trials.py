@@ -31,7 +31,7 @@ class GroomingTrial(Base):
 
     def data_equal(self, other_trial):
         return all([self.num_bouts == other_trial.num_bouts,
-                    self.num_chains == other_trial.num_chains,
+                    self.num_chains == other_trial.chains_perMin,
                     self.num_complete_chains == other_trial.num_complete_chains])
 
     def add_to_db(self, my_object=None):
@@ -54,14 +54,14 @@ class GroomingTrial(Base):
         #                                            'trial_num',
         #                                            'trial_length', 'latency_to_onset', 'num_bouts',
         #                                            'total_time_grooming',
-        #                                            'num_interrupted_bouts', 'num_chains', 'num_complete_chains',
+        #                                            'num_interrupted_bouts', 'chains_perMin', 'num_complete_chains',
         #                                            'avg_time_per_bout'],
         #                                   delimiter=',',
         #                                   dtype={'grooming_summary_id': str, 'session_id': str,
         #                                          'scored_session_dir': str,
         #                                          'trial_num': int, 'trial_length': float, 'latency_to_onset': float,
         #                                          'num_bouts': int, 'total_time_grooming': float,
-        #                                          'num_interrupted_bouts': int, 'num_chains': int,
+        #                                          'num_interrupted_bouts': int, 'chains_perMin': int,
         #                                          'num_complete_chains': int, 'avg_time_per_bout': float})
         # for index, grooming_summary_row in grooming_summary_df.iterrows():
         #     if cls.query.get(grooming_summary_row['grooming_summary_id']) is None:
@@ -74,7 +74,7 @@ class GroomingTrial(Base):
         #                       num_bouts=grooming_summary_row['num_bouts'],
         #                       total_time_grooming=grooming_summary_row['total_time_grooming'],
         #                       num_interrupted_bouts=grooming_summary_row['num_interrupted_bouts'],
-        #                       num_chains=grooming_summary_row['num_chains'],
+        #                       chains_perMin=grooming_summary_row['chains_perMin'],
         #                       num_complete_chains=grooming_summary_row['num_complete_chains'],
         #                       avg_time_per_bout=grooming_summary_row['avg_time_per_bout']).add_to_db()
 
@@ -98,7 +98,7 @@ class GroomingTrial(Base):
         #         complete_count = value['complete']
         #     elif not value['index']:
         #         incomplete_count = value['complete']
-        # num_chains = incomplete_count + complete_count
+        # chains_perMin = incomplete_count + complete_count
         # num_complete_chains = complete_count
         #
         # interrupted_count_dict = all_bouts_df.interrupted.value_counts().sort_index().reset_index().transpose().to_dict()
@@ -113,11 +113,11 @@ class GroomingTrial(Base):
         # all_grooming_frames = all_bouts_df.total_frames.sum()
         # total_time_grooming = all_grooming_frames / 100
         #
-        # if not self.data_equal(num_bouts, total_time_grooming, num_interrupted_bouts, num_chains, num_complete_chains):
+        # if not self.data_equal(num_bouts, total_time_grooming, num_interrupted_bouts, chains_perMin, num_complete_chains):
         #     self.num_bouts = num_bouts
         #     self.total_time_grooming = total_time_grooming
         #     self.num_interrupted_bouts = num_interrupted_bouts
-        #     self.num_chains = num_chains
+        #     self.chains_perMin = chains_perMin
         #     self.num_complete_chains = num_complete_chains
         #     self.update()
 

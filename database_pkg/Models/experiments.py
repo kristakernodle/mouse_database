@@ -861,7 +861,7 @@ class DlxGrooming(Experiment):
                     bout.start_frame = new_bout.start_frame
                     bout.end_frame = new_bout.end_frame
                     bout.bout_length = new_bout.bout_length
-                    bout.num_chains = new_bout.num_chains
+                    bout.chains_perMin = new_bout.num_chains
                     bout.num_complete_chains = new_bout.num_complete_chains
                     bout.add_to_db()
 
@@ -870,9 +870,9 @@ class DlxGrooming(Experiment):
                 new_bout = None
                 continued_flag = False
 
-                if bout.num_chains > 0:
-                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(chain_idx) + int(bout.num_chains)])
-                    chain_idx += bout.num_chains
+                if bout.chains_perMin > 0:
+                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(chain_idx) + int(bout.chains_perMin)])
+                    chain_idx += bout.chains_perMin
 
     def _update_grooming_trials(self):
 
