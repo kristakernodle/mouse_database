@@ -147,11 +147,15 @@ chains_only_df = pd.read_sql(dbpkg.db.session.query(
 
 chains_only_df.insert(chains_only_df.shape[1], 'chain_duration',
                       (chains_only_df['end_frame'] - chains_only_df['start_frame']) / 100)
+
 chains_by_trial_df = chains_only_df.groupby('grooming_trial_id').agg(sum)
 chains_by_trial_df = chains_by_trial_df.rename_axis('grooming_trial_id').reset_index()
 
 trials_with_chains = pd.merge(temp_trials_df, chains_by_trial_df, on=['grooming_trial_id'], how='left')
 trials_with_chains['chain_duration'] = trials_with_chains['chain_duration'].fillna(0)
+
+trials_with_chains.insert(trials_with_chains.shape[1], 'num_incomplete_chains',
+                          trials_with_chains['num_chains'] - trials_with_chains['num_complete_chains'])
 
 trials_with_chains.insert(trials_with_chains.shape[1], 'nonchain_duration',
                           trials_with_chains['total_time_grooming'] - trials_with_chains['chain_duration'])
@@ -320,7 +324,7 @@ y_genotype = ['Control', 'Dlx-CKO']
 totalGrooming_ax = plt.subplot2grid((2, 3), (0, 0))
 initiationsPerMin_ax = plt.subplot2grid((2, 3), (0, 1))
 duration_ax = plt.subplot2grid((2, 3), (0, 2))
-allTransQuantity_ax = plt.subplot2grid((2, 3), (1, 0))
+chainQuantity_ax = plt.subplot2grid((2, 3), (1, 0))
 distributionTransition_ax = plt.subplot2grid((2, 3), (1, 1), colspan=2)
 
 # Total Grooming Time (Fig 3A)
@@ -361,7 +365,8 @@ initiationsPerMin_ax = format_ax(initiationsPerMin_ax,
                                  ylim=[0, 6],
                                  yticks=[2, 4, 6],
                                  ylabel='initiations (per min grooming)',
-                                 title='grooming frequency')
+                                 title='grooming frequency',
+                                 titleloc='right')
 
 # Duration (Fig 3C)
 ordered_duration_columns = ("nonchain_duration", "chain_duration")
@@ -377,23 +382,24 @@ duration_ax = format_ax(duration_ax,
                         ylim=[0, 360],
                         yticks=[100, 200, 300],
                         ylabel='duration (seconds)',
-                        title='uninterrupted grooming')
+                        title='uninterrupted grooming',
+                        titleloc='right')
 
-# Number of transitions (Fig 3D)
-ordered_numberTransitions_columns = ("typicalTransitions_perChain", "atypicalTransitions_perChain")
-numberTransitions_orderedColumns = [Column("typicalTransitions_perChain", hatch='+'),
-                                    Column("atypicalTransitions_perChain", hatch=None)]
-numberTransitions_mean, numberTransitions_sem = get_mean_sem(trials_with_chains_mean_sem,
-                                                             ordered_numberTransitions_columns)
-allTransQuantity_ax = create_stacked_bar_chart(allTransQuantity_ax,
-                                               numberTransitions_mean,
-                                               numberTransitions_sem,
-                                               numberTransitions_orderedColumns)
-allTransQuantity_ax = format_ax(allTransQuantity_ax,
-                                ylim=[0, 4],
-                                yticks=[1, 2, 3],
-                                ylabel='grooming phase transitions\n(per chain initiated)',
-                                title='chain transition quantity')
+# Number of chains (Fig 3D)
+ordered_numberChains_columns = ("num_incomplete_chains", "num_complete_chains")
+numberChains_orderedColumns = [Column('num_incomplete_chains', hatch='+'),
+                               Column("num_complete_chains", hatch=None)]
+numberChains_mean, numberChains_sem = get_mean_sem(trials_with_chains_mean_sem,
+                                                   ordered_numberChains_columns)
+chainQuantity_ax = create_stacked_bar_chart(chainQuantity_ax,
+                                            numberChains_mean,
+                                            numberChains_sem,
+                                            numberChains_orderedColumns)
+chainQuantity_ax = format_ax(chainQuantity_ax,
+                             ylim=[0, 4.5],
+                             yticks=[1, 2, 3, 4],
+                             ylabel='number of chains (per trial)',
+                             title='chain quantity')
 
 # Distribution of atypical transitions (Fig 3E)
 ordered_distributionTransitions_columns = ("reverse_percentAtypicalTransitions",
