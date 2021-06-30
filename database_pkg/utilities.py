@@ -81,3 +81,9 @@ def convert_dict_keys_to_str(dict_in):
     for key in dict_in.keys():
         dict_out[str(key)] = dict_in[key]
     return dict_out
+
+
+def merge_dicts(dict1, dict2, dict3):
+    dict2.update(dict1)
+    dict2.update(dict3)
+    return dict2
