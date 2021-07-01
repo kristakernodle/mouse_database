@@ -194,7 +194,7 @@ trials_with_chains.insert(trials_with_chains.shape[1], 'nonChainGrooming_percent
                           (trials_with_chains['nonchain_duration'] / (trials_with_chains['trial_length']) * 100))
 
 trials_with_chains.insert(trials_with_chains.shape[1], 'typicalTransitions_percentTotal',
-                         trials_with_chains['num_typical_transitions'] / (trials_with_chains['num_transitions'] / 60))
+                          trials_with_chains['num_typical_transitions'] / (trials_with_chains['num_transitions'] / 60))
 
 trials_with_chains.insert(trials_with_chains.shape[1], 'atypicalTransitions_percentTotal',
                           trials_with_chains['num_atypical_transitions'] / (trials_with_chains['num_transitions'] / 60))
@@ -243,53 +243,89 @@ def get_mean_sem(agg_df, columns):
     return mean.reset_index(), sem.reset_index()
 
 
-def create_stacked_bar_chart(axis, mean_df, sem_df, ordered_columns):
+def create_stacked_bar_chart(axis, mean_df, sem_df, ordered_columns, horizontal=False):
     if len(ordered_columns) == 2:
-        errorbar_x = ([-0.1, 0.9], [0.1, 1.1])
+        error_bar = ([-0.1, 0.9], [0.1, 1.1])
     elif len(ordered_columns) == 3:
-        errorbar_x = ([-0.1, 0.9], [0, 1], [0.1, 1.1])
+        error_bar = ([-0.1, 0.9], [0, 1], [0.1, 1.1])
     else:
-        errorbar_x = None
-        print('errorbar_x undefined')
+        error_bar = None
+        print('error_bar undefined')
         breakpoint()
 
     for index, column in enumerate(ordered_columns):
         if index == 0:
-            bottom = [index, index]
+            offset = [index, index]
         elif index == 1:
-            bottom = mean_df[(ordered_columns[0].name, 'mean')]
+            offset = mean_df[(ordered_columns[0].name, 'mean')]
         elif index == 2:
-            bottom = mean_df[(ordered_columns[0].name, 'mean')] + mean_df[(ordered_columns[1].name, 'mean')]
-
-        if column.hatch is None:
-            axis.bar([0, 1],
-                     mean_df[(column.name, "mean")],
-                     bottom=bottom,
-                     color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
-                     edgecolor='k',
-                     linewidth=1)
+            offset = mean_df[(ordered_columns[0].name, 'mean')] + mean_df[(ordered_columns[1].name, 'mean')]
         else:
-            axis.bar([0, 1],
-                     mean_df[(column.name, "mean")],
-                     bottom=bottom,
-                     color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
-                     hatch=column.hatch,
-                     edgecolor='w',
-                     linewidth=1)
-            axis.bar([0, 1],
-                     mean_df[(column.name, "mean")],
-                     bottom=bottom,
-                     color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
-                     edgecolor='k',
-                     fill=False,
-                     linewidth=1)
+            offset = None
+            breakpoint()
 
-        for idx in [0, 1]:
-            axis.errorbar(x=errorbar_x[index][idx],
-                          y=bottom[idx] + mean_df[(column.name, 'mean')][idx],
-                          yerr=sem_df[(column.name, 'sem')][idx],
-                          ecolor='k',
-                          capsize=2)
+        if not horizontal:
+            if column.hatch is None:
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         edgecolor='k',
+                         linewidth=1)
+            elif column.hatch is not None:
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         hatch=column.hatch,
+                         edgecolor='w',
+                         linewidth=1)
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         edgecolor='k',
+                         fill=False,
+                         linewidth=1)
+
+            for idx in [0, 1]:
+                axis.errorbar(x=error_bar[index][idx],
+                              y=offset[idx] + mean_df[(column.name, 'mean')][idx],
+                              yerr=sem_df[(column.name, 'sem')][idx],
+                              ecolor='k',
+                              capsize=2)
+
+        elif horizontal:
+            if column.hatch is None:
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          edgecolor='k',
+                          linewidth=1)
+            elif column.hatch is not None:
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          hatch=column.hatch,
+                          edgecolor='w',
+                          linewidth=1)
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          edgecolor='k',
+                          fill=False,
+                          linewidth=1)
+
+            for idx in [0, 1]:
+                axis.errorbar(x=offset[idx] + mean_df[(column.name, 'mean')][idx],
+                              y=error_bar[index][idx],
+                              xerr=sem_df[(column.name, 'sem')][idx],
+                              ecolor='k',
+                              capsize=2)
+
     return axis
 
 
@@ -306,6 +342,24 @@ def format_ax(axis, ylim, yticks, ylabel, yticklabels=None, title=None, titleloc
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.tick_params(axis='x', which='both', bottom=False, labelbottom=True)
+    axis.set_title(title, loc=titleloc)
+    return axis
+
+
+def format_h_ax(axis, xlim, xticks, xlabel, xticklabels=None, title=None, titleloc='center'):
+    if xticklabels is None:
+        xticklabels = xticks
+
+    axis.set_xlim(xlim[0], xlim[1])
+    axis.set_xticks(xticks)
+    axis.set_xticklabels(xticklabels)
+    axis.set_xlabel(xlabel)
+    axis.set_ylim(-0.6, 2)
+    axis.set_yticks([0, 1])
+    axis.set_yticklabels(['Control', 'Dlx-CKO'])
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.tick_params(axis='y', which='both', left=False)
     axis.set_title(title, loc=titleloc)
     return axis
 
@@ -338,20 +392,13 @@ totalGrooming_ax = create_stacked_bar_chart(totalGrooming_ax,
                                             grooming_by_type_mean,
                                             grooming_by_type_sem,
                                             totalGrooming_orderedColumns)
-totalGrooming_ax = format_ax(totalGrooming_ax,
-                             ylim=[0, 35],
-                             yticks=[10, 20, 30],
-                             ylabel='time spent (% of trial)',
+totalGrooming_ax = format_ax(totalGrooming_ax, ylim=[0, 35], yticks=[10, 20, 30], ylabel='time spent (% of trial)',
                              title='grooming quantity')
-
-# legend_elements = [Patch(facecolor='k', edgecolor='w', label='chain'),
-#                    Patch(facecolor='k', hatch='//', edgecolor='w', label='non-chain')]
-# totalGrooming_ax.legend(handles=legend_elements, loc='upper left')
 
 ## Initiations per Minute Grooming (Fig 3B)
 
 ordered_initiationsPerMin_columns = ("bouts_perMin", "chains_perMin")
-initiationsPerMin_orderedColumns = [Column('bouts_perMin', hatch='//'),
+initiationsPerMin_orderedColumns = [Column('bouts_perMin', hatch='///'),
                                     Column('chains_perMin', hatch=None)]
 
 initiations_mean, initiations_sem = get_mean_sem(trials_with_chains_mean_sem,
@@ -361,12 +408,17 @@ initiationsPerMin_ax = create_stacked_bar_chart(initiationsPerMin_ax,
                                                 initiations_sem,
                                                 initiationsPerMin_orderedColumns)
 
-initiationsPerMin_ax = format_ax(initiationsPerMin_ax,
-                                 ylim=[0, 6],
-                                 yticks=[2, 4, 6],
-                                 ylabel='initiations (per min grooming)',
-                                 title='grooming frequency',
+initiationsPerMin_ax = format_ax(initiationsPerMin_ax, ylim=[0, 6], yticks=[2, 4, 6],
+                                 ylabel='initiations\n(per min grooming)', title='grooming frequency',
                                  titleloc='right')
+
+legend_elements = [Patch(facecolor='k', edgecolor='w', label='chain'),
+                   Patch(facecolor='k', hatch='///', edgecolor='w', label='non-chain')]
+initiationsPerMin_ax.legend(handles=legend_elements,
+                            loc='upper center',
+                            frameon=False,
+                            fancybox=False,
+                            fontsize='small')
 
 # Duration (Fig 3C)
 ordered_duration_columns = ("nonchain_duration", "chain_duration")
@@ -378,16 +430,12 @@ duration_ax = create_stacked_bar_chart(duration_ax,
                                        duration_mean,
                                        duration_sem,
                                        duration_orderedColumns)
-duration_ax = format_ax(duration_ax,
-                        ylim=[0, 360],
-                        yticks=[100, 200, 300],
-                        ylabel='duration (seconds)',
-                        title='uninterrupted grooming',
-                        titleloc='right')
+duration_ax = format_ax(duration_ax, ylim=[0, 360], yticks=[100, 200, 300], ylabel='duration (seconds)',
+                        title='uninterrupted grooming', titleloc='right')
 
 # Number of chains (Fig 3D)
 ordered_numberChains_columns = ("num_incomplete_chains", "num_complete_chains")
-numberChains_orderedColumns = [Column('num_incomplete_chains', hatch='+'),
+numberChains_orderedColumns = [Column('num_incomplete_chains', hatch='++'),
                                Column("num_complete_chains", hatch=None)]
 numberChains_mean, numberChains_sem = get_mean_sem(trials_with_chains_mean_sem,
                                                    ordered_numberChains_columns)
@@ -395,31 +443,50 @@ chainQuantity_ax = create_stacked_bar_chart(chainQuantity_ax,
                                             numberChains_mean,
                                             numberChains_sem,
                                             numberChains_orderedColumns)
-chainQuantity_ax = format_ax(chainQuantity_ax,
-                             ylim=[0, 4.5],
-                             yticks=[1, 2, 3, 4],
-                             ylabel='number of chains (per trial)',
-                             title='chain quantity')
+chainQuantity_ax = format_ax(chainQuantity_ax, ylim=[0, 4.5], yticks=[1, 2, 3, 4],
+                             ylabel='number of chains (per trial)', title='chain quantity')
+
+legend_elements = [Patch(facecolor='k', edgecolor='w', label='incomplete'),
+                   Patch(facecolor='k', hatch='++', edgecolor='w', label='complete')]
+chainQuantity_ax.legend(handles=legend_elements,
+                        loc='right',
+                        frameon=False,
+                        fancybox=False,
+                        fontsize='small')
 
 # Distribution of atypical transitions (Fig 3E)
 ordered_distributionTransitions_columns = ("reverse_percentAtypicalTransitions",
                                            "atypicalEnd_percentAtypicalTransitions",
                                            "skips_percentAtypicalTransitions")
-distributionTransitions_orderedColumns = [Column("reverse_percentAtypicalTransitions", hatch="\\"),
-                                          Column('atypicalEnd_percentAtypicalTransitions', hatch='.'),
+distributionTransitions_orderedColumns = [Column("reverse_percentAtypicalTransitions", hatch="\\\\\\"),
+                                          Column('atypicalEnd_percentAtypicalTransitions', hatch='..'),
                                           Column("skips_percentAtypicalTransitions", hatch=None)]
 distributionTransitions_mean, distributionTransitions_sem = get_mean_sem(trials_with_chains_mean_sem,
                                                                          ordered_distributionTransitions_columns)
 distributionTransition_ax = create_stacked_bar_chart(distributionTransition_ax,
                                                      distributionTransitions_mean,
                                                      distributionTransitions_sem,
-                                                     distributionTransitions_orderedColumns)
-distributionTransition_ax = format_ax(distributionTransition_ax,
-                                      ylim=[0, 110],
-                                      yticks=[25, 50, 75, 100],
-                                      ylabel='proportion of transitions\n(% of atypical transitions)',
-                                      title='distribution of atypical transitions',
-                                      titleloc='right')
+                                                     distributionTransitions_orderedColumns,
+                                                     horizontal=True)
+distributionTransition_ax = format_h_ax(distributionTransition_ax,
+                                        xlim=[0, 110],
+                                        xticks=[25, 50, 75, 100],
+                                        xlabel='proportion of transitions (% of atypical transitions)',
+                                        title='distribution of atypical transitions',
+                                        titleloc='right')
+
+legend_elements = [Patch(facecolor='k', edgecolor='w', label='skips'),
+                   Patch(facecolor='k', hatch='\\\\\\', edgecolor='w', label='reverse'),
+                   Patch(facecolor='k', hatch='..', edgecolor='w', label='atypical end')]
+distributionTransition_ax.legend(handles=legend_elements,
+                                 loc='upper center',
+                                 frameon=False,
+                                 fancybox=False,
+                                 fontsize='small',
+                                 ncol=3)
+legend_patches = distributionTransition_ax.get_legend().get_patches()
+for patch in legend_patches:
+    patch.set_height(10)
 
 plt.tight_layout()
 plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig3_{today_str}.pdf')
