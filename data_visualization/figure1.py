@@ -236,6 +236,8 @@ any_success_ax.annotate('*\n*\n*',
 labels = ['control', 'Dlx-CKO']
 any_success_ax.legend(title=None, labels=labels)
 any_success_ax.set(xlabel=None, ylabel='% success')
+any_success_ax.spines['top'].set_visible(False)
+any_success_ax.spines['right'].set_visible(False)
 
 # Plot: Proportion Contact Trials
 sns.lineplot(ax=proportion_contact_ax, x="session_num", y="prop_4_s",
@@ -269,7 +271,8 @@ for tDay in [3, 6, 7]:
                                    xycoords='data',
                                    ha='center',
                                    linespacing=any_success_linespacing)
-
+proportion_contact_ax.spines['top'].set_visible(False)
+proportion_contact_ax.spines['right'].set_visible(False)
 # Plot: Proportion No Contact Trials
 sns.lineplot(ax=proportion_noContact_ax, x="session_num", y="prop_5_s",
              hue='genotype', hue_order=["Control", "Knock-Out"], palette=genotype_palette,
@@ -309,7 +312,8 @@ for tDay in [6, 7, 10]:
                                      xycoords='data',
                                      ha='center',
                                      linespacing=any_success_linespacing)
-
+proportion_noContact_ax.spines['top'].set_visible(False)
+proportion_noContact_ax.spines['right'].set_visible(False)
 # Closing Figure Settings
-plt.tight_layout(h_pad=0.3, pad=1)
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210607.pdf')
+plt.tight_layout(pad=1)
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210708.pdf')
