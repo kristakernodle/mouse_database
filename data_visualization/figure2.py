@@ -1,133 +1,60 @@
 import pandas as pd
-import numpy as np
 import matplotlib
-from scipy import stats
 import matplotlib.pyplot as plt
 
-from database_pkg import Mouse, Experiment, Session
+import database_pkg as dbpkg
+from data_visualization.plot_functions import get_mean_sem, genotype_cleanup, Column, create_stacked_bar_chart, \
+    format_ax
 
-experiment = Experiment.get_by_name("dlxCKO-pasta-handling")
+custom_colors = {'Dlx-CKO Control': "#005AB5", "Dlx-CKO": "#DC3220"}
+experiment = dbpkg.Experiment.get_by_name("dlxCKO-pasta-handling")
 
-ph_summary_data = list()
-ph_summary_data_long = list()
-for ph_summary in experiment.scored_pasta_handling:
-    session = Session.query.get(ph_summary.session_id)
-    mouse = Mouse.query.get(session.mouse_id)
+phScores_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
+                                                 dbpkg.Mouse.eartag,
+                                                 dbpkg.Mouse.sex,
+                                                 dbpkg.Mouse.birthdate,
+                                                 dbpkg.Mouse.genotype,
+                                                 dbpkg.Session.session_id,
+                                                 dbpkg.Session.session_date,
+                                                 dbpkg.Session.session_dir,
+                                                 dbpkg.Session.session_num,
+                                                 dbpkg.PastaHandlingScores.pasta_handling_score_id,
+                                                 dbpkg.PastaHandlingScores.trial_num,
+                                                 dbpkg.PastaHandlingScores.time_to_eat,
+                                                 dbpkg.PastaHandlingScores.left_forepaw_adjustments,
+                                                 dbpkg.PastaHandlingScores.right_forepaw_adjustments,
+                                                 dbpkg.PastaHandlingScores.left_forepaw_failure_to_contact,
+                                                 dbpkg.PastaHandlingScores.right_forepaw_failure_to_contact,
+                                                 dbpkg.PastaHandlingScores.guide_grasp_switch,
+                                                 dbpkg.PastaHandlingScores.drops,
+                                                 dbpkg.PastaHandlingScores.mouth_pulling,
+                                                 dbpkg.PastaHandlingScores.pasta_long_paws_together,
+                                                 dbpkg.PastaHandlingScores.pasta_short_paws_apart,
+                                                 dbpkg.PastaHandlingScores.abnormal_posture,
+                                                 dbpkg.PastaHandlingScores.iron_grip,
+                                                 dbpkg.PastaHandlingScores.guide_around_grasp,
+                                                 dbpkg.PastaHandlingScores.angling_with_head_tilt) \
+                          .join(dbpkg.Session, dbpkg.Session.mouse_id == dbpkg.Mouse.mouse_id) \
+                          .join(dbpkg.PastaHandlingScores,
+                                dbpkg.PastaHandlingScores.session_id == dbpkg.Session.session_id) \
+                          .statement,
+                          dbpkg.db.session.bind)
 
-    if mouse.genotype == 'Dlx-CKO':
-        genotype = 'Knock-Out'
-    elif mouse.genotype == 'Dlx-CKO Control':
-        genotype = 'Control'
-    else:
-        breakpoint()
+phScores_df.insert(phScores_df.shape[1], 'forepaw_adjustments',
+                   (phScores_df['left_forepaw_adjustments'] +
+                    phScores_df['right_forepaw_adjustments']))
 
-    new_row = {'eartag': mouse.eartag,
-               'genotype': genotype,
-               'birthdate': mouse.birthdate,
-               'sex': mouse.sex,
-               'session_date': session.session_date,
-               'session_dir': session.session_dir,
-               'scored_session_dir': ph_summary.scored_session_dir,
-               'trial_num': ph_summary.trial_num,
-               }
-    trial_details = {'time_to_eat': ph_summary.time_to_eat,
-                     'grasp_paw_start': ph_summary.grasp_paw_start,
-                     'guide_paw_start': ph_summary.guide_paw_start,
-                     'left_forepaw_adjustments': ph_summary.left_forepaw_adjustments,
-                     'right_forepaw_adjustments': ph_summary.right_forepaw_adjustments,
-                     'left_forepaw_failure_to_contact': ph_summary.left_forepaw_failure_to_contact,
-                     'right_forepaw_failure_to_contact': ph_summary.right_forepaw_failure_to_contact,
-                     'guide_grasp_switch': ph_summary.guide_grasp_switch,
-                     'drops': ph_summary.drops,
-                     'mouth_pulling': ph_summary.mouth_pulling,
-                     'pasta_long_paws_together': ph_summary.pasta_long_paws_together,
-                     'pasta_short_paws_apart': ph_summary.pasta_short_paws_apart,
-                     'abnormal_posture': ph_summary.abnormal_posture,
-                     'iron_grip': ph_summary.iron_grip,
-                     'guide_around_grasp': ph_summary.guide_around_grasp,
-                     'angling_with_head_tilt': ph_summary.angling_with_head_tilt,
-                     'left_forepaw_failure_to_contact_bool': ph_summary.left_forepaw_failure_to_contact_bool,
-                     'right_forepaw_failure_to_contact_bool': ph_summary.right_forepaw_failure_to_contact_bool,
-                     'guide_grasp_switch_bool': ph_summary.guide_grasp_switch_bool,
-                     'drops_bool': ph_summary.drops_bool,
-                     'mouth_pulling_bool': ph_summary.mouth_pulling_bool,
-                     'pasta_long_paws_together_bool': ph_summary.pasta_long_paws_together_bool,
-                     'pasta_short_paws_apart_bool': ph_summary.pasta_short_paws_apart_bool,
-                     'abnormal_posture_bool': ph_summary.abnormal_posture_bool,
-                     'iron_grip_bool': ph_summary.iron_grip_bool,
-                     'guide_around_grasp_bool': ph_summary.guide_around_grasp_bool,
-                     'angling_with_head_tilt_bool': ph_summary.angling_with_head_tilt_bool
-                     }
-    ph_summary_data_long.append(dict(**new_row, **trial_details))
+phScores_df.insert(phScores_df.shape[1], 'forepaw_failure_to_contact',
+                   (phScores_df['left_forepaw_failure_to_contact'] +
+                    phScores_df['right_forepaw_failure_to_contact']))
 
-    for key in trial_details.keys():
-        this_row = dict(**new_row,
-                        **{'trial measure': key,
-                           'value': trial_details[key]})
-        ph_summary_data.append(this_row)
+phScores_df.to_csv('/Users/Krista/OneDrive - Umich/figures/pastaHandling_20210708.csv')
 
-ph_summary_df = pd.DataFrame.from_records(ph_summary_data)
-ph_summary_long_df = pd.DataFrame.from_records(ph_summary_data_long)
+phScores_trialAgg_df = phScores_df.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
 
-ph_summary_long_df.insert(ph_summary_long_df.shape[1], 'forepaw_adjustments',
-                          (ph_summary_long_df['left_forepaw_adjustments'] +
-                           ph_summary_long_df['right_forepaw_adjustments']))
-
-ph_summary_long_df.insert(ph_summary_long_df.shape[1], 'forepaw_failure_to_contact',
-                          (ph_summary_long_df['left_forepaw_failure_to_contact'] +
-                           ph_summary_long_df['right_forepaw_failure_to_contact']))
-
-out_df = ph_summary_long_df.groupby("genotype").agg([np.mean, stats.sem])
-out_df = out_df.transpose().reset_index()
-out = out_df.rename(
-    columns={"level_0": 'measure', 'level_1': "statistic", 'Control': "control", 'Knock-Out': 'knockout'})
-
-desired_measures = ['forepaw_adjustments',
-                    'forepaw_failure_to_contact',
-                    'guide_grasp_switch',
-                    'drops',
-                    'mouth_pulling',
-                    'pasta_long_paws_together',
-                    'pasta_short_paws_apart']
-# ,
-#                     'abnormal_posture',
-#                     'iron_grip',
-#                     'guide_around_grasp',
-#                     'angling_with_head_tilt'
-
-out_dict = {'forepaw_adjustments': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'forepaw_failure_to_contact': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'guide_grasp_switch': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'drops': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'mouth_pulling': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'pasta_long_paws_together': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None},
-            'pasta_short_paws_apart': {'ctrl_mean': None, 'ctrl_sem': None, 'ko_mean': None, 'ko_sem': None}}
-for index, row in out.iterrows():
-    if index == 0 or row.measure not in desired_measures:
-        continue
-
-    if row.statistic == 'mean':
-        out_dict[row.measure]['ctrl_mean'] = row.control
-        out_dict[row.measure]['ko_mean'] = row.knockout
-    elif row.statistic == 'sem':
-        out_dict[row.measure]['ctrl_sem'] = row.control
-        out_dict[row.measure]['ko_sem'] = row.knockout
-
-out_df = pd.DataFrame.from_records(out_dict)
-plot_df = out_df.transpose()
-
-atypical_behavior_order = ["forepaw_failure_to_contact",
-                           "pasta_long_paws_together",
-                           "pasta_short_paws_apart",
-                           "guide_grasp_switch",
-                           "mouth_pulling",
-                           "drops"]
-mapping = {atypical_behavior: i for i, atypical_behavior in enumerate(atypical_behavior_order)}
-
-key = plot_df.index.map(mapping)
-plot_df = plot_df.iloc[key.argsort()]
-plot_df = plot_df.rename_axis('measure').reset_index()
-plot_df = plot_df[plot_df['measure'].isin(atypical_behavior_order)]
+# phScores_trialAgg_df = phScores_trialAgg_df.transpose().reset_index()
+# out = phScores_trialAgg_df.rename(
+#     columns={"level_0": 'measure', 'level_1': "statistic", 'Control': "control", 'Knock-Out': 'Dlx-CKO'})
 
 ## Start Figures
 
@@ -140,32 +67,117 @@ fig.set_figwidth(7.48031)
 fig.set_figheight(2.5)
 fig.set_dpi(1000)
 
-ax1 = plt.subplot2grid((1, 1), (0, 0))
+forepawAdjustment_ax = plt.subplot2grid((1, 6), (0, 0))
+atypicalBehavior_ax = plt.subplot2grid((1, 6), (0, 1), colspan=5)
 
-plot_df.plot.bar(x='measure', y=["ctrl_mean", "ko_mean"],
-                 ax=ax1,
-                 color={"ctrl_mean": "#005AB5", "ko_mean": "#DC3220"},
-                 yerr=[plot_df["ctrl_sem"], plot_df["ko_sem"]],
-                 capsize=4)
-ax1.set_xticklabels(["any forepaw\nno contact",
-                     "pasta long,\npaws together",
-                     "pasta short,\npaws apart",
-                     "guide/grasp\nswitch",
-                     "mouth pulling",
-                     "drops"],
-                    rotation='horizontal')
-ax1.set_xlabel(None)
-ax1.set_ylabel('mean observations / trial')
-ax1.set_ylim(0, 1.9)
-ax1.set_yticks([0, 0.5, 1, 1.5])
-ax1.set_yticklabels([0, 0.5, 1, 1.5])
-ax1.legend(title=None, labels=["control", "Dlx-CKO"])
+columns_dict = {forepawAdjustment_ax: [Column('forepaw_adjustments', label=None)],
+                atypicalBehavior_ax: [Column('forepaw_failure_to_contact', label='any forepaw\nno contact'),
+                                      Column('pasta_long_paws_together', label="pasta long,\npaws together"),
+                                      Column('pasta_short_paws_apart', label="pasta short,\npaws apart"),
+                                      Column('guide_grasp_switch', label="guide/grasp\nswitch"),
+                                      Column('mouth_pulling', label="mouth\npulling"),
+                                      Column('drops', label="drops")]}
 
-ax1.plot([4.875, 5.125], [1.75, 1.75], color='black', linewidth=1.0)
-ax1.annotate('*',
-             xy=(5, 1.75),
-             xycoords='data',
-             ha='center')
+forepawAdjustment_orderedColumns = columns_dict[forepawAdjustment_ax]
+forepawAdjustment_mean, forepawAdjustment_sem = get_mean_sem(phScores_trialAgg_df,
+                                                             forepawAdjustment_orderedColumns)
+forepawAdjustment_mean = forepawAdjustment_mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+forepawAdjustment_sem = forepawAdjustment_sem.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
 
-plt.tight_layout()
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210607.pdf')
+forepawAdjustment_x = list(range(len(forepawAdjustment_mean)))
+width = 0.35
+
+forepawAdjustment_ax.bar([xval - width / 2 for xval in forepawAdjustment_x],
+                         forepawAdjustment_mean['Dlx-CKO Control'],
+                         width=width,
+                         color=custom_colors['Dlx-CKO Control'],
+                         label='control')
+forepawAdjustment_ax.bar([xval + width / 2 for xval in forepawAdjustment_x],
+                         forepawAdjustment_mean['Dlx-CKO'],
+                         width=width,
+                         color=custom_colors['Dlx-CKO'],
+                         label='Dlx-CKO')
+
+forepawAdjustment_ax.errorbar(x=[xval - width / 2 for xval in forepawAdjustment_x],
+                              y=forepawAdjustment_mean['Dlx-CKO Control'],
+                              yerr=forepawAdjustment_sem['Dlx-CKO Control'],
+                              ecolor='k',
+                              capsize=2,
+                              ls='none')
+forepawAdjustment_ax.errorbar(x=[xval + width / 2 for xval in forepawAdjustment_x],
+                              y=forepawAdjustment_mean['Dlx-CKO'],
+                              yerr=forepawAdjustment_sem['Dlx-CKO'],
+                              ecolor='k',
+                              capsize=2,
+                              ls='none')
+
+forepawAdjustment_ax.set_xticks([0])
+forepawAdjustment_ax.set_xticklabels(["forepaw\nadjustments"],
+                                    fontsize=9)
+forepawAdjustment_ax.set_yticks([50, 100, 150])
+forepawAdjustment_ax.set_yticklabels([50, 100, 150])
+forepawAdjustment_ax.set_ylabel("number of forepaw adjustments\n(per trial)")
+forepawAdjustment_ax.tick_params(axis='x', bottom=False)
+forepawAdjustment_ax.spines['top'].set_visible(False)
+forepawAdjustment_ax.spines['right'].set_visible(False)
+# forepawAdjustment_ax = format_ax(forepawAdjustment_ax,)
+
+# atypical behaviors
+atypicalBehaviors_orderedColumns = columns_dict[atypicalBehavior_ax]
+atypicalBehaviors_mean, atypicalBehaviors_sem = get_mean_sem(phScores_trialAgg_df,
+                                                             atypicalBehaviors_orderedColumns)
+
+atypicalBehaviors_mean = atypicalBehaviors_mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+atypicalBehaviors_sem = atypicalBehaviors_sem.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+
+atypicalBehavior_x = list(range(len(atypicalBehaviors_mean)))
+
+atypicalBehavior_ax.bar([xval - width / 2 for xval in atypicalBehavior_x],
+                        atypicalBehaviors_mean['Dlx-CKO Control'],
+                        width=width,
+                        color=custom_colors['Dlx-CKO Control'],
+                        label='control')
+atypicalBehavior_ax.bar([xval + width / 2 for xval in atypicalBehavior_x],
+                        atypicalBehaviors_mean['Dlx-CKO'],
+                        width=width,
+                        color=custom_colors['Dlx-CKO'],
+                        label='Dlx-CKO')
+
+atypicalBehavior_ax.errorbar(x=[xval - width / 2 for xval in atypicalBehavior_x],
+                              y=atypicalBehaviors_mean['Dlx-CKO Control'],
+                              yerr=atypicalBehaviors_sem['Dlx-CKO Control'],
+                              ecolor='k',
+                              capsize=2,
+                              ls='none')
+atypicalBehavior_ax.errorbar(x=[xval + width / 2 for xval in atypicalBehavior_x],
+                              y=atypicalBehaviors_mean['Dlx-CKO'],
+                              yerr=atypicalBehaviors_sem['Dlx-CKO'],
+                              ecolor='k',
+                              capsize=2,
+                              ls='none')
+
+atypicalBehavior_ax.set_xticks(atypicalBehavior_x)
+atypicalBehavior_ax.set_xticklabels([column.label for column in atypicalBehaviors_orderedColumns],
+                                    fontsize=9)
+atypicalBehavior_ax.set_xlabel(None)
+atypicalBehavior_ax.set_ylabel('number of times performed\n(per trial)')
+atypicalBehavior_ax.set_ylim(0, 1.9)
+atypicalBehavior_ax.set_yticks([0.5, 1, 1.5])
+atypicalBehavior_ax.set_yticklabels([0.5, 1, 1.5])
+atypicalBehavior_ax.legend(title=None, labels=["control", "Dlx-CKO"])
+atypicalBehavior_ax.tick_params(axis='x', bottom=False)
+
+ctrl_x = [xval - width / 2 for xval in atypicalBehavior_x]
+ko_x = [xval + width / 2 for xval in atypicalBehavior_x]
+drops_x = [ctrl_x[-1], ko_x[-1]]
+
+atypicalBehavior_ax.plot(drops_x, [1.75, 1.75], color='black', linewidth=1.0)
+atypicalBehavior_ax.annotate('*',
+                             xy=(sum(drops_x)/2, 1.75),
+                             xycoords='data',
+                             ha='center')
+atypicalBehavior_ax.spines['top'].set_visible(False)
+atypicalBehavior_ax.spines['right'].set_visible(False)
+plt.tight_layout(pad=0.2)
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210708.pdf')
+plt.close('all')

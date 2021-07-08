@@ -6,6 +6,8 @@ from matplotlib.colors import ListedColormap
 import seaborn as sns
 import pandas as pd
 
+custom_colors = {'Dlx-CKO Control': "#005AB5", "Dlx-CKO": "#DC3220"}
+
 palette = {"Control": 'b', "Knock-Out": 'r'}
 heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
 ctrl_miss_palette = {'contact miss': 'b',
@@ -238,7 +240,7 @@ def plot_figure1(reach_scores_by_eartag_by_session_df):
     ax4 = plt.subplot2grid((3, 2), (2, 0))
     ax5 = plt.subplot2grid((3, 2), (2, 1))
 
-    # ax1.imshow(plt.imread('/Users/Krista/OneDrive - Umich/figures/figures_ai/skilled-reaching-box.png'))
+    # atypicalBehavior_ax.imshow(plt.imread('/Users/Krista/OneDrive - Umich/figures/figures_ai/skilled-reaching-box.png'))
     ax1.axis("off")
     ax3.axis("off")
 
@@ -340,3 +342,151 @@ def plot_figure1_draft1(reach_scores_by_eartag_by_session_df):
     ax5.set(xlabel=None, ylabel=None)
     plt.tight_layout()
     plt.savefig('/Users/Krista/Desktop/figures/fig1.pdf')
+
+
+def get_mean_sem(agg_df, columns):
+    columnTups_mean = [(column.name, "mean") for column in columns]
+    columnTups_sem = [(column.name, "sem") for column in columns]
+    mean = agg_df[columnTups_mean]
+    sem = agg_df[columnTups_sem]
+    return mean.reset_index(), sem.reset_index()
+
+
+def genotype_cleanup(df_row):
+    if df_row['genotype'] == 'Dlx-CKO Control':
+        return 'control'
+    else:
+        return 'Dlx-CKO'
+
+
+class Column:
+    def __init__(self, name, label, hatch=None, alpha=None):
+        self.name = name
+        self.label = label
+        self.hatch = hatch
+        self.alpha = alpha
+
+    def __repr__(self):
+        return self.name
+
+
+def create_stacked_bar_chart(axis, mean_df, sem_df, ordered_columns, horizontal=False):
+    if len(ordered_columns) == 1:
+        error_bar = ([0, 1])
+    elif len(ordered_columns) == 2:
+        error_bar = ([-0.1, 0.9], [0.1, 1.1])
+    elif len(ordered_columns) == 3:
+        error_bar = ([-0.1, 0.9], [0, 1], [0.1, 1.1])
+    else:
+        error_bar = None
+        print('error_bar undefined')
+        breakpoint()
+
+    for index, column in enumerate(ordered_columns):
+        if index == 0:
+            offset = [index, index]
+        elif index == 1:
+            offset = mean_df[(ordered_columns[0].name, 'mean')]
+        elif index == 2:
+            offset = mean_df[(ordered_columns[0].name, 'mean')] + mean_df[(ordered_columns[1].name, 'mean')]
+        else:
+            offset = None
+            breakpoint()
+
+        if not horizontal:
+            if column.hatch is None:
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         edgecolor='k',
+                         linewidth=1,
+                         alpha=column.alpha)
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         edgecolor='k',
+                         fill=False,
+                         linewidth=1)
+            elif column.hatch is not None:
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         hatch=column.hatch,
+                         edgecolor='w',
+                         linewidth=1)
+                axis.bar([0, 1],
+                         mean_df[(column.name, "mean")],
+                         bottom=offset,
+                         color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                         edgecolor='k',
+                         fill=False,
+                         linewidth=1)
+
+            for idx in [0, 1]:
+                try:
+                    axis.errorbar(x=error_bar[index][idx],
+                                  y=offset[idx] + mean_df[(column.name, 'mean')][idx],
+                                  yerr=sem_df[(column.name, 'sem')][idx],
+                                  ecolor='k',
+                                  capsize=2)
+                except TypeError:
+                    axis.errorbar(x=error_bar[idx],
+                                  y=offset[idx] + mean_df[(column.name, 'mean')][idx],
+                                  yerr=sem_df[(column.name, 'sem')][idx],
+                                  ecolor='k',
+                                  capsize=2)
+
+
+        elif horizontal:
+            if column.hatch is None:
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          edgecolor='k',
+                          linewidth=1,
+                          alpha=column.alpha)
+            elif column.hatch is not None:
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          hatch=column.hatch,
+                          edgecolor='w',
+                          linewidth=1)
+                axis.barh([0, 1],
+                          mean_df[(column.name, "mean")],
+                          left=offset,
+                          color=[custom_colors['Dlx-CKO Control'], custom_colors['Dlx-CKO']],
+                          edgecolor='k',
+                          fill=False,
+                          linewidth=1)
+
+            for idx in [0, 1]:
+                axis.errorbar(x=offset[idx] + mean_df[(column.name, 'mean')][idx],
+                              y=error_bar[index][idx],
+                              xerr=sem_df[(column.name, 'sem')][idx],
+                              ecolor='k',
+                              capsize=2)
+
+    return axis
+
+
+def format_ax(axis, ylim, yticks, ylabel, yticklabels=None, title=None, titleloc='center'):
+    if yticklabels is None:
+        yticklabels = yticks
+
+    axis.set_ylim(ylim[0], ylim[1])
+    axis.set_yticks(yticks)
+    axis.set_yticklabels(yticklabels)
+    axis.set_ylabel(ylabel)
+    axis.set_xticks([0, 1])
+    axis.set_xticklabels(['control', 'Dlx-CKO'], rotation='horizontal')
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.tick_params(axis='atypicalBehavior_x', which='both', bottom=False, labelbottom=True)
+    axis.set_title(title, loc=titleloc)
+    return axis
