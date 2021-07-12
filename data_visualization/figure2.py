@@ -67,59 +67,60 @@ fig.set_figwidth(7.48031)
 fig.set_figheight(2.5)
 fig.set_dpi(1000)
 
-forepawAdjustment_ax = plt.subplot2grid((1, 6), (0, 0))
-atypicalBehavior_ax = plt.subplot2grid((1, 6), (0, 1), colspan=5)
+# forepawAdjustment_ax = plt.subplot2grid((1, 6), (0, 0))
+atypicalBehavior_ax = plt.subplot2grid((1, 6), (0, 0), colspan=6)
 
-columns_dict = {forepawAdjustment_ax: [Column('forepaw_adjustments', label=None)],
-                atypicalBehavior_ax: [Column('forepaw_failure_to_contact', label='any forepaw\nno contact'),
+bar_width = 0.35
+
+columns_dict = {atypicalBehavior_ax: [Column('forepaw_failure_to_contact', label='any forepaw\nno contact'),
                                       Column('pasta_long_paws_together', label="pasta long,\npaws together"),
                                       Column('pasta_short_paws_apart', label="pasta short,\npaws apart"),
                                       Column('guide_grasp_switch', label="guide/grasp\nswitch"),
                                       Column('mouth_pulling', label="mouth\npulling"),
                                       Column('drops', label="drops")]}
+                #                       forepawAdjustment_ax: [Column('forepaw_adjustments', label=None)]
 
-forepawAdjustment_orderedColumns = columns_dict[forepawAdjustment_ax]
-forepawAdjustment_mean, forepawAdjustment_sem = get_mean_sem(phScores_trialAgg_df,
-                                                             forepawAdjustment_orderedColumns)
-forepawAdjustment_mean = forepawAdjustment_mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
-forepawAdjustment_sem = forepawAdjustment_sem.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+# forepawAdjustment_orderedColumns = columns_dict[forepawAdjustment_ax]
+# forepawAdjustment_mean, forepawAdjustment_sem = get_mean_sem(phScores_trialAgg_df,
+#                                                              forepawAdjustment_orderedColumns)
+# forepawAdjustment_mean = forepawAdjustment_mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+# forepawAdjustment_sem = forepawAdjustment_sem.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
 
-forepawAdjustment_x = list(range(len(forepawAdjustment_mean)))
-width = 0.35
+# forepawAdjustment_x = list(range(len(forepawAdjustment_mean)))
 
-forepawAdjustment_ax.bar([xval - width / 2 for xval in forepawAdjustment_x],
-                         forepawAdjustment_mean['Dlx-CKO Control'],
-                         width=width,
-                         color=custom_colors['Dlx-CKO Control'],
-                         label='control')
-forepawAdjustment_ax.bar([xval + width / 2 for xval in forepawAdjustment_x],
-                         forepawAdjustment_mean['Dlx-CKO'],
-                         width=width,
-                         color=custom_colors['Dlx-CKO'],
-                         label='Dlx-CKO')
-
-forepawAdjustment_ax.errorbar(x=[xval - width / 2 for xval in forepawAdjustment_x],
-                              y=forepawAdjustment_mean['Dlx-CKO Control'],
-                              yerr=forepawAdjustment_sem['Dlx-CKO Control'],
-                              ecolor='k',
-                              capsize=2,
-                              ls='none')
-forepawAdjustment_ax.errorbar(x=[xval + width / 2 for xval in forepawAdjustment_x],
-                              y=forepawAdjustment_mean['Dlx-CKO'],
-                              yerr=forepawAdjustment_sem['Dlx-CKO'],
-                              ecolor='k',
-                              capsize=2,
-                              ls='none')
-
-forepawAdjustment_ax.set_xticks([0])
-forepawAdjustment_ax.set_xticklabels(["forepaw\nadjustments"],
-                                    fontsize=9)
-forepawAdjustment_ax.set_yticks([50, 100, 150])
-forepawAdjustment_ax.set_yticklabels([50, 100, 150])
-forepawAdjustment_ax.set_ylabel("number of forepaw adjustments\n(per trial)")
-forepawAdjustment_ax.tick_params(axis='x', bottom=False)
-forepawAdjustment_ax.spines['top'].set_visible(False)
-forepawAdjustment_ax.spines['right'].set_visible(False)
+# forepawAdjustment_ax.bar([xval - bar_width / 2 for xval in forepawAdjustment_x],
+#                          forepawAdjustment_mean['Dlx-CKO Control'],
+#                          bar_width=bar_width,
+#                          color=custom_colors['Dlx-CKO Control'],
+#                          label='control')
+# forepawAdjustment_ax.bar([xval + bar_width / 2 for xval in forepawAdjustment_x],
+#                          forepawAdjustment_mean['Dlx-CKO'],
+#                          bar_width=bar_width,
+#                          color=custom_colors['Dlx-CKO'],
+#                          label='Dlx-CKO')
+#
+# forepawAdjustment_ax.errorbar(x=[xval - bar_width / 2 for xval in forepawAdjustment_x],
+#                               y=forepawAdjustment_mean['Dlx-CKO Control'],
+#                               yerr=forepawAdjustment_sem['Dlx-CKO Control'],
+#                               ecolor='k',
+#                               capsize=2,
+#                               ls='none')
+# forepawAdjustment_ax.errorbar(x=[xval + bar_width / 2 for xval in forepawAdjustment_x],
+#                               y=forepawAdjustment_mean['Dlx-CKO'],
+#                               yerr=forepawAdjustment_sem['Dlx-CKO'],
+#                               ecolor='k',
+#                               capsize=2,
+#                               ls='none')
+#
+# forepawAdjustment_ax.set_xticks([0])
+# forepawAdjustment_ax.set_xticklabels(["forepaw\nadjustments"],
+#                                     fontsize=9)
+# forepawAdjustment_ax.set_yticks([50, 100, 150])
+# forepawAdjustment_ax.set_yticklabels([50, 100, 150])
+# forepawAdjustment_ax.set_ylabel("number of forepaw adjustments\n(per trial)")
+# forepawAdjustment_ax.tick_params(axis='x', bottom=False)
+# forepawAdjustment_ax.spines['top'].set_visible(False)
+# forepawAdjustment_ax.spines['right'].set_visible(False)
 # forepawAdjustment_ax = format_ax(forepawAdjustment_ax,)
 
 # atypical behaviors
@@ -132,29 +133,29 @@ atypicalBehaviors_sem = atypicalBehaviors_sem.set_index(('genotype',)).transpose
 
 atypicalBehavior_x = list(range(len(atypicalBehaviors_mean)))
 
-atypicalBehavior_ax.bar([xval - width / 2 for xval in atypicalBehavior_x],
+atypicalBehavior_ax.bar([xval - bar_width / 2 for xval in atypicalBehavior_x],
                         atypicalBehaviors_mean['Dlx-CKO Control'],
-                        width=width,
+                        width=bar_width,
                         color=custom_colors['Dlx-CKO Control'],
                         label='control')
-atypicalBehavior_ax.bar([xval + width / 2 for xval in atypicalBehavior_x],
+atypicalBehavior_ax.bar([xval + bar_width / 2 for xval in atypicalBehavior_x],
                         atypicalBehaviors_mean['Dlx-CKO'],
-                        width=width,
+                        width=bar_width,
                         color=custom_colors['Dlx-CKO'],
                         label='Dlx-CKO')
 
-atypicalBehavior_ax.errorbar(x=[xval - width / 2 for xval in atypicalBehavior_x],
-                              y=atypicalBehaviors_mean['Dlx-CKO Control'],
-                              yerr=atypicalBehaviors_sem['Dlx-CKO Control'],
-                              ecolor='k',
-                              capsize=2,
-                              ls='none')
-atypicalBehavior_ax.errorbar(x=[xval + width / 2 for xval in atypicalBehavior_x],
-                              y=atypicalBehaviors_mean['Dlx-CKO'],
-                              yerr=atypicalBehaviors_sem['Dlx-CKO'],
-                              ecolor='k',
-                              capsize=2,
-                              ls='none')
+atypicalBehavior_ax.errorbar(x=[xval - bar_width / 2 for xval in atypicalBehavior_x],
+                             y=atypicalBehaviors_mean['Dlx-CKO Control'],
+                             yerr=atypicalBehaviors_sem['Dlx-CKO Control'],
+                             ecolor='k',
+                             capsize=2,
+                             ls='none')
+atypicalBehavior_ax.errorbar(x=[xval + bar_width / 2 for xval in atypicalBehavior_x],
+                             y=atypicalBehaviors_mean['Dlx-CKO'],
+                             yerr=atypicalBehaviors_sem['Dlx-CKO'],
+                             ecolor='k',
+                             capsize=2,
+                             ls='none')
 
 atypicalBehavior_ax.set_xticks(atypicalBehavior_x)
 atypicalBehavior_ax.set_xticklabels([column.label for column in atypicalBehaviors_orderedColumns],
@@ -167,8 +168,8 @@ atypicalBehavior_ax.set_yticklabels([0.5, 1, 1.5])
 atypicalBehavior_ax.legend(title=None, labels=["control", "Dlx-CKO"])
 atypicalBehavior_ax.tick_params(axis='x', bottom=False)
 
-ctrl_x = [xval - width / 2 for xval in atypicalBehavior_x]
-ko_x = [xval + width / 2 for xval in atypicalBehavior_x]
+ctrl_x = [xval - bar_width / 2 for xval in atypicalBehavior_x]
+ko_x = [xval + bar_width / 2 for xval in atypicalBehavior_x]
 drops_x = [ctrl_x[-1], ko_x[-1]]
 
 atypicalBehavior_ax.plot(drops_x, [1.75, 1.75], color='black', linewidth=1.0)
@@ -179,5 +180,5 @@ atypicalBehavior_ax.annotate('*',
 atypicalBehavior_ax.spines['top'].set_visible(False)
 atypicalBehavior_ax.spines['right'].set_visible(False)
 plt.tight_layout(pad=0.2)
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210708.pdf')
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210712.pdf')
 plt.close('all')
