@@ -1,11 +1,13 @@
 import database_pkg as dbpkg
 import pandas as pd
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.patches import Patch
 from datetime import date
 
-from data_visualization.plot_functions import get_mean_sem, genotype_cleanup, Column, create_stacked_bar_chart, format_ax, paired_bar_chart
+from data_visualization.plot_functions import get_mean_sem, genotype_cleanup, Column, create_stacked_bar_chart, \
+    format_ax, paired_bar_chart
 
 today_str = dbpkg.Date(date.today().strftime('%Y%m%d')).yyyymmdd
 
@@ -239,8 +241,8 @@ def create_legend_patches(ordered_columns):
     return patches
 
 
-fig, ax = plt.subplots()
-w = 7.48
+fig = plt.figure()
+w = 5.5
 fig.set_figwidth(w)
 fig.set_dpi(1000)
 cap_size = 4
@@ -251,36 +253,60 @@ plt.rcParams['ytick.major.pad'] = -0.5
 color_dict = {"Control": custom_colors["Dlx-CKO Control"],
               "Dlx-CKO": custom_colors["Dlx-CKO"]}
 
-totalGrooming_nonChain_ax = plt.subplot2grid((4, 6), (0, 4))
-totalGrooming_chain_ax = plt.subplot2grid((4, 6), (0, 5))
-initiationsPerMin_ax = plt.subplot2grid((4, 6), (1, 4), colspan=2)
-duration_ax = plt.subplot2grid((4, 6), (2, 0), colspan=2)
-chainQuantity_ax = plt.subplot2grid((4, 6), (2, 2), colspan=2)
-numTransitions_ax = plt.subplot2grid((4, 6), (2, 4), colspan=2)
-distributionTransition_ax = plt.subplot2grid((4, 6), (3, 0), colspan=3)
-distributionPhases_ax = plt.subplot2grid((4, 6), (3, 3), colspan=3)
+totalGrooming_gs = gridspec.GridSpec(1, 2)
+totalGrooming_nonChain_ax = fig.add_subplot(totalGrooming_gs[0])
+totalGrooming_chain_ax = fig.add_subplot(totalGrooming_gs[1])
 
-totalGrooming_nonChain_ax.set_anchor('E')
-totalGrooming_chain_ax.set_anchor('W')
+initiationsPerMin_gs = gridspec.GridSpec(1, 2)
+initiationsPerMin_nonChain_ax = fig.add_subplot(initiationsPerMin_gs[0])
+initiationsPerMin_chain_ax = fig.add_subplot(initiationsPerMin_gs[1])
+
+duration_gs = gridspec.GridSpec(1, 2)
+duration_nonChain_ax = fig.add_subplot(duration_gs[0])
+duration_chain_ax = fig.add_subplot(duration_gs[1])
+
+chainQuantity_gs = gridspec.GridSpec(1, 2)
+chainQuantity_nonChain_ax = fig.add_subplot(chainQuantity_gs[0])
+chainQuantity_chain_ax = fig.add_subplot(chainQuantity_gs[1])
+
+numTransitions_gs = gridspec.GridSpec(1, 2)
+numTransitions_nonChain_ax = fig.add_subplot(numTransitions_gs[0])
+numTransitions_chain_ax = fig.add_subplot(numTransitions_gs[1])
+
+distributionTransition_gs = gridspec.GridSpec(1, 1)
+distributionTransition_ax = fig.add_subplot(distributionTransition_gs[0])
+
+distributionPhases_gs = gridspec.GridSpec(1, 1)
+distributionPhases_ax = fig.add_subplot(distributionPhases_gs[0])
+
+# totalGrooming_nonChain_ax = plt.subplot2grid((4, 6), (0, 4))
+# totalGrooming_chain_ax = plt.subplot2grid((4, 6), (0, 5))
+# initiationsPerMin_nonChain_ax = plt.subplot2grid((4, 6), (1, 4), colspan=2)
+# duration_nonChain_ax = plt.subplot2grid((4, 6), (2, 0), colspan=2)
+# chainQuantity_nonChain_ax = plt.subplot2grid((4, 6), (2, 2), colspan=2)
+# numTransitions_nonChain_ax = plt.subplot2grid((4, 6), (2, 4), colspan=2)
+# distributionTransition_ax = plt.subplot2grid((4, 6), (3, 0), colspan=3)
+# distributionPhases_ax = plt.subplot2grid((4, 6), (3, 3), colspan=3)
 
 columns_dict = {
     totalGrooming_nonChain_ax: [Column('nonChainGrooming_percentTrial', 'non-chain', hatch='///', alpha=None)],
     totalGrooming_chain_ax: [Column('chainGrooming_percentTrial', 'chain', hatch=None, alpha=None)],
-    initiationsPerMin_ax: [Column('bouts_perMin', 'non-chain', hatch='///', alpha=None),
-                           Column('chains_perMin', 'chain', hatch=None, alpha=None)],
-    duration_ax: [Column('nonchain_duration', 'non-chain', hatch='///', alpha=None),
-                  Column('chain_duration', 'chain', hatch=None, alpha=None)],
-    chainQuantity_ax: [Column("num_complete_chains", 'complete', hatch=None, alpha=None),
-                       Column('num_incomplete_chains', 'incomplete', hatch=None, alpha=0.5)],
-    numTransitions_ax: [Column('num_typical_transitions', 'typical', hatch=None, alpha=1),
-                        Column('num_atypical_transitions', 'atypical', hatch=None, alpha=0.5)],
+    initiationsPerMin_nonChain_ax: [Column('bouts_perMin', 'non-chain', hatch='///', alpha=None)],
+    initiationsPerMin_chain_ax: [Column('chains_perMin', 'chain', hatch=None, alpha=None)],
+    duration_nonChain_ax: [Column('nonchain_duration', 'non-chain', hatch='///', alpha=None)],
+    duration_chain_ax: [Column('chain_duration', 'chain', hatch=None, alpha=None)],
+    chainQuantity_nonChain_ax: [Column("num_complete_chains", 'complete', hatch=None, alpha=None)],
+    chainQuantity_chain_ax: [Column('num_incomplete_chains', 'incomplete', hatch=None, alpha=0.5)],
+    numTransitions_nonChain_ax: [Column('num_typical_transitions', 'typical', hatch=None, alpha=1)],
+    numTransitions_chain_ax: [Column('num_atypical_transitions', 'atypical', hatch=None, alpha=0.5)],
     distributionTransition_ax: [Column("skips_percentAtypicalTransitions", 'skips', hatch=None, alpha=1),
                                 Column("reverse_percentAtypicalTransitions", 'reverses', hatch=None, alpha=0.6),
-                                Column('atypicalEnd_percentAtypicalTransitions', 'premature\ntermination', hatch=None, alpha=0.3)],
-    distributionPhases_ax: [Column("grooming_phase_1", '1', hatch=None, alpha=1),
-                            Column("grooming_phase_2", '2', hatch=None, alpha=1),
-                            Column("grooming_phase_3", '3', hatch=None, alpha=1),
-                            Column("grooming_phase_4", '4', hatch=None, alpha=1)]
+                                Column('atypicalEnd_percentAtypicalTransitions', 'premature\ntermination', hatch=None,
+                                       alpha=0.3)],
+    distributionPhases_ax: [Column("grooming_phase_1", 'ellipse', hatch=None, alpha=1),
+                            Column("grooming_phase_2", 'unilteral\nstrokes', hatch=None, alpha=1),
+                            Column("grooming_phase_3", 'bilateral\nstrokes', hatch=None, alpha=1),
+                            Column("grooming_phase_4", 'body licks', hatch=None, alpha=1)]
 }
 
 # Total Grooming Time (Fig 3B)
@@ -294,15 +320,13 @@ totalGrooming_nonChain_ax = paired_bar_chart(totalGrooming_nonChain_ax,
                                              title='grooming quantity')
 
 totalGrooming_chain_ax = paired_bar_chart(totalGrooming_chain_ax,
-                                           columns_dict,
-                                           trials_with_chains_mean_sem,
-                                           None,
-                                           [0, 6],
-                                           [2, 3, 4, 5])
+                                          columns_dict,
+                                          trials_with_chains_mean_sem,
+                                          None,
+                                          [0, 5],
+                                          [2, 4])
 totalGrooming_chain_ax.yaxis.set_label_position("right")
-totalGrooming_chain_ax.yaxis.tick_right()
-totalGrooming_chain_ax.spines['left'].set_visible(False)
-totalGrooming_chain_ax.spines['right'].set_visible(True)
+totalGrooming_chain_ax.yaxis.tick_left()
 # totalGrooming_orderedColumns = columns_dict[totalGrooming_nonChain_ax]
 #
 # totalGrooming_mean, totalGrooming_sem = get_mean_sem(trials_with_chains_mean_sem,
@@ -327,69 +351,110 @@ totalGrooming_chain_ax.spines['right'].set_visible(True)
 
 # Initiations per Minute Grooming (Fig 3C)
 
-initiationsPerMin_ax = paired_bar_chart(initiationsPerMin_ax,
-                                        columns_dict,
-                                        trials_with_chains_mean_sem,
-                                        'initiations\n(per min grooming)',
-                                        [0, 5],
-                                        [2, 4],
-                                        title='grooming frequency')
+initiationsPerMin_nonChain_ax = paired_bar_chart(initiationsPerMin_nonChain_ax,
+                                                 columns_dict,
+                                                 trials_with_chains_mean_sem,
+                                                 'initiations\nper min grooming',
+                                                 [0, 5],
+                                                 [2, 4],
+                                                 title='grooming frequency')
+initiationsPerMin_chain_ax = paired_bar_chart(initiationsPerMin_chain_ax,
+                                              columns_dict,
+                                              trials_with_chains_mean_sem,
+                                              None,
+                                              [0, 5.2],
+                                              [2, 4])
+bar_width = 0.35
+initiationsPerMin_nonChain_ax.plot([-bar_width / 2, bar_width / 2], [4.75, 4.75], color='black', linewidth=1.0)
+initiationsPerMin_nonChain_ax.annotate('*',
+                                       xy=(0, 4.75),
+                                       xycoords='data',
+                                       ha='center')
 
-# initiationsPerMin_orderedColumns = columns_dict[initiationsPerMin_ax]
+initiationsPerMin_chain_ax.plot([-bar_width / 2, bar_width / 2], [1.8, 1.8], color='black', linewidth=1.0)
+initiationsPerMin_chain_ax.annotate('*',
+                                       xy=(0, 1.8),
+                                       xycoords='data',
+                                       ha='center')
+
+initiationsPerMin_chain_ax.yaxis.set_label_position("right")
+initiationsPerMin_chain_ax.yaxis.tick_left()
+initiationsPerMin_chain_ax.yaxis.set_tick_params(width=0, length=0, labelleft=False)
+initiationsPerMin_chain_ax.spines['left'].set_visible(False)
+initiationsPerMin_chain_ax.spines['right'].set_visible(False)
+# initiationsPerMin_orderedColumns = columns_dict[initiationsPerMin_nonChain_ax]
 # initiations_mean, initiations_sem = get_mean_sem(trials_with_chains_mean_sem,
 #                                                  initiationsPerMin_orderedColumns)
-# initiationsPerMin_ax = create_stacked_bar_chart(initiationsPerMin_ax,
+# initiationsPerMin_nonChain_ax = create_stacked_bar_chart(initiationsPerMin_nonChain_ax,
 #                                                 initiations_mean,
 #                                                 initiations_sem,
 #                                                 initiationsPerMin_orderedColumns)
 #
-# initiationsPerMin_ax = format_ax(initiationsPerMin_ax, ylim=[0, 6], yticks=[2, 4, 6],
+# initiationsPerMin_nonChain_ax = format_ax(initiationsPerMin_nonChain_ax, ylim=[0, 6], yticks=[2, 4, 6],
 #                                  ylabel='initiations\n(per min grooming)', title='grooming frequency',
 #                                  titleloc='right')
 #
-# initiationsPerMin_ax.plot(x=[])
+# initiationsPerMin_nonChain_ax.plot(x=[])
 
 # Duration (Fig 3D)
 
-duration_ax = paired_bar_chart(duration_ax,
+duration_nonChain_ax = paired_bar_chart(duration_nonChain_ax,
                                         columns_dict,
                                         trials_with_chains_mean_sem,
-                                        'duration (seconds)',
+                                        'duration (s)',
                                         [0, 360],
-                                        [50, 100, 200, 300],
+                                        [100, 200, 300],
                                         title='uninterrupted grooming')
+duration_chain_ax = paired_bar_chart(duration_chain_ax,
+                                     columns_dict,
+                                     trials_with_chains_mean_sem,
+                                     None,
+                                     [0, 50],
+                                     [15, 30, 45])
+duration_chain_ax.yaxis.set_label_position("right")
+duration_chain_ax.yaxis.tick_left()
 
-# duration_orderedColumns = columns_dict[duration_ax]
+# duration_orderedColumns = columns_dict[duration_nonChain_ax]
 # duration_mean, duration_sem = get_mean_sem(trials_with_chains_mean_sem,
 #                                            duration_orderedColumns)
-# duration_ax = create_stacked_bar_chart(duration_ax,
+# duration_nonChain_ax = create_stacked_bar_chart(duration_nonChain_ax,
 #                                        duration_mean,
 #                                        duration_sem,
 #                                        duration_orderedColumns)
-# duration_ax = format_ax(duration_ax, ylim=[0, 360], yticks=[100, 200, 300], ylabel='duration (seconds)',
+# duration_nonChain_ax = format_ax(duration_nonChain_ax, ylim=[0, 360], yticks=[100, 200, 300], ylabel='duration (seconds)',
 #                         title='uninterrupted grooming', titleloc='right')
 
 # Syntactic chains (Fig 3E)
-chainQuantity_ax = paired_bar_chart(chainQuantity_ax,
-                                        columns_dict,
-                                        trials_with_chains_mean_sem,
-                                        'number of chains\n(per trial)',
-                                        [0, 3.75],
-                                        [1, 2, 3],
-                                        title='syntactic chains')
-# chainQuantity_ax.set_title('syntactic chains', fontdict={'fontsize': 'medium'})
-# numberChains_orderedColumns = columns_dict[chainQuantity_ax]
+chainQuantity_nonChain_ax = paired_bar_chart(chainQuantity_nonChain_ax,
+                                             columns_dict,
+                                             trials_with_chains_mean_sem,
+                                             '# of chains\n(per trial)',
+                                             [0, 3.75],
+                                             [1, 2, 3],
+                                             title='syntactic chains')
+chainQuantity_chain_ax = paired_bar_chart(chainQuantity_chain_ax,
+                                          columns_dict,
+                                          trials_with_chains_mean_sem,
+                                          None,
+                                          [0, 1],
+                                          [0.2, 0.4, 0.8])
+chainQuantity_chain_ax.yaxis.set_label_position("right")
+chainQuantity_chain_ax.yaxis.set_tick_params(width=0, length=0, labelleft=False)
+chainQuantity_chain_ax.spines['left'].set_visible(False)
+chainQuantity_chain_ax.spines['right'].set_visible(False)
+# chainQuantity_nonChain_ax.set_title('syntactic chains', fontdict={'fontsize': 'medium'})
+# numberChains_orderedColumns = columns_dict[chainQuantity_nonChain_ax]
 # numberChains_mean, numberChains_sem = get_mean_sem(trials_with_chains_mean_sem,
 #                                                    numberChains_orderedColumns)
-# chainQuantity_ax = create_stacked_bar_chart(chainQuantity_ax,
+# chainQuantity_nonChain_ax = create_stacked_bar_chart(chainQuantity_nonChain_ax,
 #                                             numberChains_mean,
 #                                             numberChains_sem,
 #                                             numberChains_orderedColumns)
-# chainQuantity_ax = format_ax(chainQuantity_ax, ylim=[0, 4.5], yticks=[1, 2, 3, 4],
+# chainQuantity_nonChain_ax = format_ax(chainQuantity_nonChain_ax, ylim=[0, 4.5], yticks=[1, 2, 3, 4],
 #                              ylabel='number of chains\n(per trial)', title='syntactic chains')
 #
 # legend_elements = create_legend_patches(numberChains_orderedColumns)
-# chainQuantity_ax.legend(handles=legend_elements,
+# chainQuantity_nonChain_ax.legend(handles=legend_elements,
 #                         loc='right',
 #                         frameon=False,
 #                         fancybox=False,
@@ -397,29 +462,39 @@ chainQuantity_ax = paired_bar_chart(chainQuantity_ax,
 
 # Number of transitions
 
-numTransitions_ax = paired_bar_chart(numTransitions_ax,
-                                        columns_dict,
-                                        trials_with_chains_mean_sem,
-                                        'number of transitions\n(per trial)',
-                                        [0, 10],
-                                        [3, 6, 9],
-                                        title='phase transitions')
+numTransitions_nonChain_ax = paired_bar_chart(numTransitions_nonChain_ax,
+                                              columns_dict,
+                                              trials_with_chains_mean_sem,
+                                              '# of transitions\nper trial',
+                                              [0, 10],
+                                              [3, 6, 9],
+                                              title='phase transitions')
+numTransitions_chain_ax = paired_bar_chart(numTransitions_chain_ax,
+                                           columns_dict,
+                                           trials_with_chains_mean_sem,
+                                           None,
+                                           [0, 10],
+                                           [3, 6, 9])
+numTransitions_chain_ax.yaxis.set_label_position("right")
+numTransitions_chain_ax.spines['left'].set_visible(False)
+numTransitions_chain_ax.spines['right'].set_visible(False)
+numTransitions_chain_ax.yaxis.set_tick_params(width=0, length=0, labelleft=False)
 
-# numberTransitions_orderedColumns = columns_dict[numTransitions_ax]
+# numberTransitions_orderedColumns = columns_dict[numTransitions_nonChain_ax]
 # numberTransitions_mean, numberTransitions_sem = get_mean_sem(trials_with_chains_mean_sem,
 #                                                              numberTransitions_orderedColumns)
-# numTransitions_ax = create_stacked_bar_chart(numTransitions_ax,
+# numTransitions_nonChain_ax = create_stacked_bar_chart(numTransitions_nonChain_ax,
 #                                              numberTransitions_mean,
 #                                              numberTransitions_sem,
 #                                              numberTransitions_orderedColumns)
-# numTransitions_ax = format_ax(numTransitions_ax,
+# numTransitions_nonChain_ax = format_ax(numTransitions_nonChain_ax,
 #                               ylim=[0, 17],
 #                               yticks=[5, 10, 15],
 #                               ylabel="number of transitions\n(per trial)",
 #                               title='phase transitions')
 #
 # legend_elements = create_legend_patches(numberChains_orderedColumns)
-# numTransitions_ax.legend(handles=legend_elements,
+# numTransitions_nonChain_ax.legend(handles=legend_elements,
 #                         loc='right',
 #                         frameon=False,
 #                         fancybox=False,
@@ -427,20 +502,19 @@ numTransitions_ax = paired_bar_chart(numTransitions_ax,
 
 # Distribution of atypical transitions (Fig 3G)
 distributionTransition_ax = paired_bar_chart(distributionTransition_ax,
-                                        columns_dict,
-                                        trials_with_chains_mean_sem,
-                                        'proportion of transitions\n(% of atypical transitions)',
-                                        [0, 75],
-                                        [15, 30, 45, 60],
-                                        title='distribution of atypical transitions')
+                                             columns_dict,
+                                             trials_with_chains_mean_sem,
+                                             'proportion of transitions\n(% of atypical transitions)',
+                                             [0, 75],
+                                             [20, 40, 60],
+                                             title='distribution of atypical transitions')
 # distributionTransition_ax.tick_params('x', labelrotation=90)
 distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
                                          columns_dict,
                                          trials_with_chains_mean_sem,
-                                         'number of occurences\n(per trial)',
-                                         [0, 5.5],
-                                         [2, 4, 5],
-                                         xlabel="grooming phase",
+                                         '# of occurences\n(per trial)',
+                                         [0, 5],
+                                         [2, 4],
                                          title='distribution of grooming phases')
 # distributionPhases_ax.set_title('distribution of grooming phases', fontdict={'fontsize': 'medium'})
 
@@ -465,6 +539,22 @@ distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
 #                                  fancybox=False,
 #                                  fontsize='small')
 
-plt.tight_layout()
+oneThird = float(1 / 3)
+twoThird = float(2 / 3)
+
+totalGrooming_gs.tight_layout(fig, rect=[0, 0.75, 0.5, 1], pad=0.2)
+initiationsPerMin_gs.tight_layout(fig, rect=[0.5, 0.75, 1, 1], pad=0.2, w_pad=1)
+duration_gs.tight_layout(fig, rect=[0, 0.5, 0.5, 0.75], pad=0.2)
+chainQuantity_gs.tight_layout(fig, rect=[0.5, 0.5, 1, 0.75], pad=0.2, w_pad=1)
+numTransitions_gs.tight_layout(fig, rect=[0, 0.25, 0.5, 0.5], pad=0.2, w_pad=1)
+distributionTransition_gs.tight_layout(fig, rect=[0.5, 0.25, 1, 0.5], pad=0.2)
+distributionPhases_gs.tight_layout(fig, rect=[0, 0, 1, 0.25], pad=0.2)
+
+# third_col_left = min(totalGrooming_gs.left, initiationsPerMin_gs.left, numTransitions_gs.left)
+# totalGrooming_gs.update(left=third_col_left)
+# initiationsPerMin_gs.update(left=third_col_left)
+# numTransitions_gs.update(left=third_col_left)
+
+# plt.tight_layout()
 plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig3_{today_str}.pdf')
 plt.close('all')
