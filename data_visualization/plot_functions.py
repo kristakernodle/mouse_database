@@ -461,7 +461,8 @@ def format_ax(axis, ylim, yticks, ylabel, yticklabels=None, title=None, titleloc
     return axis
 
 
-def paired_bar_chart(axis, columns_dict, df, ylabel, ylim, yticks, xlabel=None, title=None, legend_on=False, bar_width=0.35):
+def paired_bar_chart(axis, columns_dict, df, ylabel, ylim, yticks,
+                     xlabel=None, title=None, legend_on=False, bar_width=0.35, pad_btwnBar=0):
     ordered_columns = columns_dict[axis]
     mean, sem = get_mean_sem(df, ordered_columns)
     mean = mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
@@ -469,24 +470,24 @@ def paired_bar_chart(axis, columns_dict, df, ylabel, ylim, yticks, xlabel=None, 
 
     axis_x = list(range(len(mean)))
 
-    axis.bar([xval - bar_width / 2 for xval in axis_x],
+    axis.bar([xval - 0.5*pad_btwnBar - (bar_width / 2) for xval in axis_x],
                             mean['control'],
                             width=bar_width,
                             color=custom_colors['Dlx-CKO Control'],
                             label='control')
-    axis.bar([xval + bar_width / 2 for xval in axis_x],
+    axis.bar([xval + 0.5*pad_btwnBar + (bar_width / 2) for xval in axis_x],
                             mean['Dlx-CKO'],
                             width=bar_width,
                             color=custom_colors['Dlx-CKO'],
                             label='Dlx-CKO')
 
-    axis.errorbar(x=[xval - bar_width / 2 for xval in axis_x],
+    axis.errorbar(x=[xval - 0.5*pad_btwnBar - (bar_width / 2) for xval in axis_x],
                                  y=mean['control'],
                                  yerr=sem['control'],
                                  ecolor='k',
                                  capsize=2,
                                  ls='none')
-    axis.errorbar(x=[xval + bar_width / 2 for xval in axis_x],
+    axis.errorbar(x=[xval + 0.5*pad_btwnBar + (bar_width / 2) for xval in axis_x],
                                  y=mean['Dlx-CKO'],
                                  yerr=sem['Dlx-CKO'],
                                  ecolor='k',
@@ -495,6 +496,7 @@ def paired_bar_chart(axis, columns_dict, df, ylabel, ylim, yticks, xlabel=None, 
     axis.set_xticks(axis_x)
     axis.set_xticklabels([column.label for column in ordered_columns], fontsize=9)
     axis.set_xlabel(xlabel, fontdict={'fontsize': 'medium'})
+    axis.set_xlim(min(axis_x)-bar_width-0.2, max(axis_x)+bar_width+0.2)
     axis.set_ylabel(ylabel, fontdict={'fontsize': 'small'})
     axis.set_ylim(ylim)
     axis.set_yticks(yticks)

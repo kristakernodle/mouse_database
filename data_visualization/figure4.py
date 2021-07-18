@@ -255,7 +255,7 @@ w = 5.5
 fig.set_figwidth(w)
 fig.set_dpi(1000)
 cap_size = 4
-bar_width = 0.35
+bar_width = 0.3
 matplotlib.rcParams['font.family'] = "sans-serif"
 matplotlib.rcParams['font.sans-serif'] = "Arial"
 plt.rcParams['xtick.major.pad'] = -0.5
@@ -307,21 +307,24 @@ totalGrooming_total_ax = paired_bar_chart(totalGrooming_total_ax,
                                           trials_with_chains_mean_sem,
                                           'time spent (% trial)',
                                           [0, 35],
-                                          [10, 20, 30])
+                                          [10, 20, 30],
+                                          pad_btwnBar=0.01)
 
 totalGrooming_nonChain_ax = paired_bar_chart(totalGrooming_nonChain_ax,
                                              columns_dict,
                                              trials_with_chains_mean_sem,
                                              None,
                                              [0, 35],
-                                             [10, 20, 30])
+                                             [10, 20, 30],
+                                          pad_btwnBar=0.01)
 
 totalGrooming_chain_ax = paired_bar_chart(totalGrooming_chain_ax,
                                           columns_dict,
                                           trials_with_chains_mean_sem,
                                           None,
                                           [0, 5],
-                                          [2, 4])
+                                          [2, 4],
+                                          pad_btwnBar=0.01)
 
 totalGrooming_nonChain_ax.spines['left'].set_visible(False)
 totalGrooming_nonChain_ax.tick_params(axis='y', which='both', length=0, width=0, labelbottom=True)
@@ -335,21 +338,24 @@ initiationsPerMin_total_ax = paired_bar_chart(initiationsPerMin_total_ax,
                                               trials_with_chains_mean_sem,
                                               'initiations/min grooming',
                                               [0, 5.5],
-                                              [1, 3, 5])
+                                              [1, 3, 5],
+                                          pad_btwnBar=0.01)
 
 initiationsPerMin_nonChain_ax = paired_bar_chart(initiationsPerMin_nonChain_ax,
                                                  columns_dict,
                                                  trials_with_chains_mean_sem,
                                                  None,
                                                  [0, 5.5],
-                                                 [1, 3, 5])
+                                                 [1, 3, 5],
+                                          pad_btwnBar=0.01)
 
 initiationsPerMin_chain_ax = paired_bar_chart(initiationsPerMin_chain_ax,
                                               columns_dict,
                                               trials_with_chains_mean_sem,
                                               None,
                                               [0, 5.5],
-                                              [1, 3, 5])
+                                              [1, 3, 5],
+                                          pad_btwnBar=0.01)
 
 initiationsPerMin_nonChain_ax.plot([-bar_width / 2, bar_width / 2], [4.75, 4.75], color='black', linewidth=1.0)
 initiationsPerMin_nonChain_ax.annotate('*',
@@ -379,13 +385,15 @@ chainQuantity_nonChain_ax = paired_bar_chart(chainQuantity_nonChain_ax,
                                              trials_with_chains_mean_sem,
                                              '# chains/trial',
                                              [0, 3.75],
-                                             [1, 2, 3])
+                                             [1, 2, 3],
+                                          pad_btwnBar=0.01)
 chainQuantity_chain_ax = paired_bar_chart(chainQuantity_chain_ax,
                                           columns_dict,
                                           trials_with_chains_mean_sem,
                                           None,
-                                          [0, 1],
-                                          [0.2, 0.4, 0.8])
+                                          [0, 0.75],
+                                          [0.2, 0.4, 0.6],
+                                          pad_btwnBar=0.01)
 chainQuantity_chain_ax.yaxis.set_label_position("right")
 chainQuantity_chain_ax.yaxis.tick_left()
 chainQuantity_chain_ax.yaxis.set_tick_params(labelleft=True)
@@ -396,8 +404,9 @@ distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
                                          columns_dict,
                                          trials_with_chains_mean_sem,
                                          '# of occurences/trial',
-                                         [0, 6],
-                                         [2, 4])
+                                         [0, 5],
+                                         [2, 4],
+                                          pad_btwnBar=0.01)
 
 oneThird = float(1 / 3)
 twoThird = float(2 / 3)
