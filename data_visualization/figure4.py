@@ -244,11 +244,6 @@ def create_legend_patches(ordered_columns):
                              alpha=column.alpha))
     return patches
 
-fig = plt.figure()
-ax = fig.add_subplot()
-ax = control_chains.hist(ax=ax, column='duration_seconds', alpha=0.5, color='m', bins=21)
-ax = dlx_chains.hist(ax=ax, column='duration_seconds', alpha=0.5, color='b', bins=21)
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig4_chainDuration_20210716.pdf')
 
 fig = plt.figure()
 w = 5.5
@@ -260,7 +255,7 @@ matplotlib.rcParams['font.family'] = "sans-serif"
 matplotlib.rcParams['font.sans-serif'] = "Arial"
 plt.rcParams['xtick.major.pad'] = -0.5
 plt.rcParams['ytick.major.pad'] = -0.5
-color_dict = {"Control": custom_colors["Dlx-CKO Control"],
+color_dict = {"control": custom_colors["Dlx-CKO Control"],
               "Dlx-CKO": custom_colors["Dlx-CKO"]}
 
 totalGrooming_gs = gridspec.GridSpec(1, 3)
@@ -378,6 +373,42 @@ initiationsPerMin_nonChain_ax.spines['right'].set_visible(False)
 
 # Duration Distribution (histogram) (Fig 4C)
 # TODO Here is the histogram figure
+durationHist_nonChain_ax.hist([bouts_df.query('genotype=="control"')['bout_duration'].to_list(),
+                               bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()],
+                              bins=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+                              color=[custom_colors['Dlx-CKO Control'],
+                                     custom_colors['Dlx-CKO']],
+                              density=True)
+durationHist_nonChain_ax.set_xlim(0, 100)
+durationHist_nonChain_ax.set_title('duration non-chain grooming bouts', fontdict={'fontsize': 'medium'})
+durationHist_nonChain_ax.set_xlabel('duration (s)')
+durationHist_nonChain_ax.set_ylabel('# events')
+durationHist_chain_ax.set_title('duration syntactic chains', fontdict={'fontsize': 'medium'})
+durationHist_chain_ax.set_xlabel('duration (s)')
+
+durationHist_chain_ax.hist([chains_df.query('genotype=="control"')['duration_seconds'].to_list(),
+                            chains_df.query('genotype=="Dlx-CKO"')['duration_seconds'].to_list()],
+                            bins=[0, 3, 6, 9, 12, 15, 18, 21, 24],
+                            color=[custom_colors['Dlx-CKO Control'],
+                                   custom_colors['Dlx-CKO']],
+                           density=True)
+durationHist_nonChain_ax.spines['top'].set_visible(False)
+durationHist_nonChain_ax.spines['right'].set_visible(False)
+durationHist_chain_ax.spines['top'].set_visible(False)
+durationHist_chain_ax.spines['right'].set_visible(False)
+# durationHist_chain_ax.set_xlim(0, 100)
+#
+#     bouts_df.query('genotype=="Dlx-CKO"').hist(ax=durationHist_nonChain_ax,
+#                                                column='bout_duration',
+#                                                alpha=1,
+#                                                color=color_dict['Dlx-CKO'],
+#                                                bins=10)
+# durationHist_nonChain_ax = bouts_df.query('genotype=="control"').hist(ax=durationHist_nonChain_ax,
+#                                                column='bout_duration',
+#                                                alpha=0.5,
+#                                                color=color_dict['control'],
+#                                                bins=10)
+
 
 # Syntactic chains (Fig 4D)
 chainQuantity_nonChain_ax = paired_bar_chart(chainQuantity_nonChain_ax,
@@ -413,9 +444,9 @@ twoThird = float(2 / 3)
 
 totalGrooming_gs.tight_layout(fig, rect=[0, twoThird, 0.5, 1], pad=0.2)
 initiationsPerMin_gs.tight_layout(fig, rect=[0.5, twoThird, 1, 1], pad=0.2, w_pad=1)
-durationHist_gs.tight_layout(fig, rect=[0, oneThird, 0.5, twoThird])
-chainQuantity_gs.tight_layout(fig, rect=[0.5, oneThird, 1, twoThird], pad=0.2, w_pad=1)
-distributionPhases_gs.tight_layout(fig, rect=[0, 0, 1, oneThird], pad=0.2)
+durationHist_gs.tight_layout(fig, rect=[0, oneThird, 1, twoThird], pad=0.2)
+chainQuantity_gs.tight_layout(fig, rect=[0, 0, 0.5, oneThird], pad=0.2, w_pad=1)
+distributionPhases_gs.tight_layout(fig, rect=[0.5, 0, 1, oneThird], pad=0.2)
 
-plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig3_{today_str}.pdf')
+plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig4_{today_str}.pdf')
 plt.close('all')
