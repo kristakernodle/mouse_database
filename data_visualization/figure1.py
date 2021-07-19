@@ -209,13 +209,7 @@ any_success_ax.set_ylim(0, 40)
 any_success_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
 any_success_ax.set_xticklabels([None]*11)
 any_success_ax.set_yticks([10, 20, 30, 40])
-# Add significance
-# any_success_ax.plot([1, 21], [42, 42], color='black', linewidth=line_width / 2)
-# any_success_ax.annotate('*',
-#                         xy=(10.5, 42),
-#                         xytext=(10.5, 42),
-#                         xycoords='data',
-#                         ha='center')
+
 _, y_err_vals = any_success_ax.get_lines()[3].get_data()
 for tDay in [3, 5, 9, 12, 13, 14, 15, 19]:
     any_success_ax.annotate('*',
@@ -252,13 +246,8 @@ proportion_contact_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
 proportion_contact_ax.set_xticklabels([None]*11)
 proportion_contact_ax.set_yticks([.25, .50, .75, 1.00])
 proportion_contact_ax.set_yticklabels([25, 50, 75, 100])
-proportion_contact_ax.set(title=None, xlabel=None, ylabel='pellet contact')
-# proportion_contact_ax.plot([1, 21], [0.20, 0.20], color='black', linewidth=line_width / 2)
-# proportion_contact_ax.annotate('**',
-#                                xy=(10.5, 0.07),
-#                                xytext=(10.5, 0.07),
-#                                xycoords='data',
-#                                ha='center')
+proportion_contact_ax.set(title=None, xlabel=None, ylabel='pellet displaced')
+
 _, y_err_vals = proportion_contact_ax.get_lines()[6].get_data()
 for tDay in [9, 10, 13, 17]:
     proportion_contact_ax.annotate('*',
@@ -273,6 +262,7 @@ for tDay in [3, 6, 7]:
                                    linespacing=any_success_linespacing)
 proportion_contact_ax.spines['top'].set_visible(False)
 proportion_contact_ax.spines['right'].set_visible(False)
+
 # Plot: Proportion No Contact Trials
 sns.lineplot(ax=proportion_noContact_ax, x="session_num", y="prop_5_s",
              hue='genotype', hue_order=["Control", "Knock-Out"], palette=genotype_palette,
@@ -285,14 +275,8 @@ proportion_noContact_ax.set_ylim(0, 1)
 proportion_noContact_ax.set_xticks([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21])
 proportion_noContact_ax.set_yticks([.25, .50, .75, 1.00])
 proportion_noContact_ax.set_yticklabels([25, 50, 75, 100])
-proportion_noContact_ax.set(title=None, xlabel='training day', ylabel='no pellet contact')
+proportion_noContact_ax.set(title=None, xlabel='training day', ylabel='pellet remains')
 
-# proportion_noContact_ax.plot([1, 21], [0.85, 0.85], color='black', linewidth=line_width / 2)
-# proportion_noContact_ax.annotate('***',
-#                                  xy=(10.5, 0.85),
-#                                  xytext=(10.5, 0.85),
-#                                  xycoords='data',
-#                                  ha='center')
 _, y_err_vals = proportion_noContact_ax.get_lines()[7].get_data()
 for tDay in [8, 13]:
     proportion_noContact_ax.annotate('*',
@@ -316,4 +300,4 @@ proportion_noContact_ax.spines['top'].set_visible(False)
 proportion_noContact_ax.spines['right'].set_visible(False)
 # Closing Figure Settings
 plt.tight_layout(pad=1)
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210708.pdf')
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure1/fig1_20210719.pdf')
