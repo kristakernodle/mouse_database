@@ -173,8 +173,8 @@ trials_with_chains.insert(trials_with_chains.shape[1], 'bouts_perMin',
                           trials_with_chains['num_bouts'] / (trials_with_chains['total_time_grooming'] / 60))
 
 trials_with_chains.insert(trials_with_chains.shape[1], 'totalBoutsChains_perMin',
-                          (trials_with_chains['num_chains']+trials_with_chains['num_bouts']) /
-                          (trials_with_chains['total_time_grooming']/60))
+                          (trials_with_chains['num_chains'] + trials_with_chains['num_bouts']) /
+                          (trials_with_chains['total_time_grooming'] / 60))
 
 trials_with_chains.insert(trials_with_chains.shape[1], 'chainGrooming_percentTrial',
                           (trials_with_chains['chain_duration'] / (trials_with_chains['trial_length']) * 100))
@@ -258,17 +258,13 @@ plt.rcParams['ytick.major.pad'] = -0.5
 color_dict = {"control": custom_colors["Dlx-CKO Control"],
               "Dlx-CKO": custom_colors["Dlx-CKO"]}
 
-totalGrooming_gs = gridspec.GridSpec(1, 3)
-totalGrooming_total_ax = fig.add_subplot(totalGrooming_gs[0])
-totalGrooming_nonChain_ax = fig.add_subplot(totalGrooming_gs[1])
-totalGrooming_chain_ax = fig.add_subplot(totalGrooming_gs[2])
+totalGrooming_total_nonChain_gs = gridspec.GridSpec(1, 1)
+totalGrooming_total_nonChain_ax = fig.add_subplot(totalGrooming_total_nonChain_gs[0])
+totalGrooming_chain_gs = gridspec.GridSpec(1, 1)
+totalGrooming_chain_ax = fig.add_subplot(totalGrooming_chain_gs[0])
 
-
-initiationsPerMin_gs = gridspec.GridSpec(1, 3)
-initiationsPerMin_total_ax = fig.add_subplot(initiationsPerMin_gs[0])
-initiationsPerMin_nonChain_ax = fig.add_subplot(initiationsPerMin_gs[1])
-initiationsPerMin_chain_ax = fig.add_subplot(initiationsPerMin_gs[2])
-
+initiationsPerMin_gs = gridspec.GridSpec(1, 1)
+initiationsPerMin_ax = fig.add_subplot(initiationsPerMin_gs[0])
 
 durationHist_gs = gridspec.GridSpec(1, 2)
 durationHist_nonChain_ax = fig.add_subplot(durationHist_gs[0])
@@ -282,12 +278,12 @@ distributionPhases_gs = gridspec.GridSpec(1, 1)
 distributionPhases_ax = fig.add_subplot(distributionPhases_gs[0])
 
 columns_dict = {
-    totalGrooming_nonChain_ax: [Column('nonChainGrooming_percentTrial', 'non-chain', hatch='///', alpha=None)],
+    totalGrooming_total_nonChain_ax: [Column('totalGrooming_percentTrial', 'total'),
+                                      Column('nonChainGrooming_percentTrial', 'non-chain', hatch='///', alpha=None)],
     totalGrooming_chain_ax: [Column('chainGrooming_percentTrial', 'chain', hatch=None, alpha=None)],
-    totalGrooming_total_ax: [Column('totalGrooming_percentTrial', 'total')],
-    initiationsPerMin_nonChain_ax: [Column('bouts_perMin', 'non-chain', hatch='///', alpha=None)],
-    initiationsPerMin_chain_ax: [Column('chains_perMin', 'chain', hatch=None, alpha=None)],
-    initiationsPerMin_total_ax: [Column('totalBoutsChains_perMin', 'total')],
+    initiationsPerMin_ax: [Column('totalBoutsChains_perMin', 'total'),
+                           Column('bouts_perMin', 'non-chain', hatch='///', alpha=None),
+                           Column('chains_perMin', 'chain', hatch=None, alpha=None)],
     chainQuantity_nonChain_ax: [Column("num_complete_chains", 'complete', hatch=None, alpha=None)],
     chainQuantity_chain_ax: [Column('num_incomplete_chains', 'incomplete', hatch=None, alpha=0.5)],
     distributionPhases_ax: [Column("grooming_phase_1", 'ellipse', hatch=None, alpha=1),
@@ -297,21 +293,13 @@ columns_dict = {
 }
 
 # Total Grooming Time (Fig 4A)
-totalGrooming_total_ax = paired_bar_chart(totalGrooming_total_ax,
-                                          columns_dict,
-                                          trials_with_chains_mean_sem,
-                                          'time spent (% trial)',
-                                          [0, 35],
-                                          [10, 20, 30],
-                                          pad_btwnBar=0.01)
-
-totalGrooming_nonChain_ax = paired_bar_chart(totalGrooming_nonChain_ax,
-                                             columns_dict,
-                                             trials_with_chains_mean_sem,
-                                             None,
-                                             [0, 35],
-                                             [10, 20, 30],
-                                          pad_btwnBar=0.01)
+totalGrooming_total_nonChain_ax = paired_bar_chart(totalGrooming_total_nonChain_ax,
+                                                   columns_dict,
+                                                   trials_with_chains_mean_sem,
+                                                   'time spent (% trial)',
+                                                   [0, 35],
+                                                   [10, 20, 30],
+                                                   pad_btwnBar=0.01)
 
 totalGrooming_chain_ax = paired_bar_chart(totalGrooming_chain_ax,
                                           columns_dict,
@@ -321,103 +309,108 @@ totalGrooming_chain_ax = paired_bar_chart(totalGrooming_chain_ax,
                                           [2, 4],
                                           pad_btwnBar=0.01)
 
-totalGrooming_nonChain_ax.spines['left'].set_visible(False)
-totalGrooming_nonChain_ax.tick_params(axis='y', which='both', length=0, width=0, labelbottom=True)
-totalGrooming_nonChain_ax.yaxis.set_tick_params(labelleft=False)
-totalGrooming_chain_ax.yaxis.set_label_position("right")
-totalGrooming_chain_ax.yaxis.tick_left()
-
 # Initiations per Minute Grooming (Fig 4B)
-initiationsPerMin_total_ax = paired_bar_chart(initiationsPerMin_total_ax,
-                                              columns_dict,
-                                              trials_with_chains_mean_sem,
+initiationsPerMin_ax = paired_bar_chart(initiationsPerMin_ax,
+                                        columns_dict,
+                                        trials_with_chains_mean_sem,
                                               'initiations/min grooming',
-                                              [0, 5.5],
-                                              [1, 3, 5],
-                                          pad_btwnBar=0.01)
+                                        [0, 5.5],
+                                        [1, 3, 5],
+                                        pad_btwnBar=0.01)
 
-initiationsPerMin_nonChain_ax = paired_bar_chart(initiationsPerMin_nonChain_ax,
-                                                 columns_dict,
-                                                 trials_with_chains_mean_sem,
-                                                 None,
-                                                 [0, 5.5],
-                                                 [1, 3, 5],
-                                          pad_btwnBar=0.01)
-
-initiationsPerMin_chain_ax = paired_bar_chart(initiationsPerMin_chain_ax,
-                                              columns_dict,
-                                              trials_with_chains_mean_sem,
-                                              None,
-                                              [0, 5.5],
-                                              [1, 3, 5],
-                                          pad_btwnBar=0.01)
-
-initiationsPerMin_nonChain_ax.plot([-bar_width / 2, bar_width / 2], [4.75, 4.75], color='black', linewidth=1.0)
-initiationsPerMin_nonChain_ax.annotate('*',
-                                       xy=(0, 4.75),
-                                       xycoords='data',
-                                       ha='center')
-
-initiationsPerMin_chain_ax.plot([-bar_width / 2, bar_width / 2], [1.8, 1.8], color='black', linewidth=1.0)
-initiationsPerMin_chain_ax.annotate('*',
-                                       xy=(0, 1.8),
-                                       xycoords='data',
-                                       ha='center')
-
-initiationsPerMin_chain_ax.yaxis.set_tick_params(width=0, length=0, labelleft=False)
-initiationsPerMin_chain_ax.spines['left'].set_visible(False)
-initiationsPerMin_chain_ax.spines['right'].set_visible(False)
-initiationsPerMin_nonChain_ax.yaxis.set_tick_params(width=0, length=0, labelleft=False)
-initiationsPerMin_nonChain_ax.spines['left'].set_visible(False)
-initiationsPerMin_nonChain_ax.spines['right'].set_visible(False)
+initiationsPerMin_ax.plot([1-bar_width/2, 1+bar_width/2], [4.75, 4.75], color='black', linewidth=1.0)
+initiationsPerMin_ax.annotate('*',
+                               xy=(1, 4.75),
+                               xycoords='data',
+                               ha='center')
+initiationsPerMin_ax.plot([2-bar_width / 2, 2+bar_width / 2], [1.8, 1.8], color='black', linewidth=1.0)
+initiationsPerMin_ax.annotate('*',
+                                    xy=(2, 1.8),
+                                    xycoords='data',
+                                    ha='center')
 
 # Duration Distribution (histogram) (Fig 4C)
-# TODO Here is the histogram figure
-durationHist_nonChain_ax.hist([bouts_df.query('genotype=="control"')['bout_duration'].to_list(),
-                               bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()],
-                              bins=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
-                              color=[custom_colors['Dlx-CKO Control'],
-                                     custom_colors['Dlx-CKO']],
-                              density=True)
-durationHist_nonChain_ax.set_xlim(0, 100)
-durationHist_nonChain_ax.set_title('duration non-chain grooming bouts', fontdict={'fontsize': 'medium'})
-durationHist_nonChain_ax.set_xlabel('duration (s)')
-durationHist_nonChain_ax.set_ylabel('# events')
-durationHist_chain_ax.set_title('duration syntactic chains', fontdict={'fontsize': 'medium'})
-durationHist_chain_ax.set_xlabel('duration (s)')
 
-durationHist_chain_ax.hist([chains_df.query('genotype=="control"')['duration_seconds'].to_list(),
-                            chains_df.query('genotype=="Dlx-CKO"')['duration_seconds'].to_list()],
-                            bins=[0, 3, 6, 9, 12, 15, 18, 21, 24],
-                            color=[custom_colors['Dlx-CKO Control'],
-                                   custom_colors['Dlx-CKO']],
-                           density=True)
+controlBouts = bouts_df.query('genotype=="control"')['bout_duration'].to_list()
+controlBouts_norm = [count / max(controlBouts) for count in controlBouts]
+
+KOBouts = bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()
+KOBouts_norm = [count / max(KOBouts) for count in KOBouts]
+
+temp_fig = plt.figure()
+temp_ax = temp_fig.add_subplot()
+
+counts, bins, patches = temp_ax.hist([bouts_df.query('genotype=="control"')['bout_duration'].to_list(),
+                                      bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()],
+                                     bins=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95,
+                                           100],
+                                     color=[custom_colors['Dlx-CKO Control'],
+                                            custom_colors['Dlx-CKO']])
+normalized_counts = list()
+for count_genotype in counts:
+    normalized_counts.append([count / max(count_genotype) for count in count_genotype])
+
+pad_btwnBar = 0.01
+x_axis = [x - 2.5 for x in bins[1:]]
+hist_bar_width = 2
+durationHist_nonChain_ax.bar([xval - 0.5 * pad_btwnBar - (hist_bar_width / 2) for xval in x_axis],
+                             normalized_counts[0],
+                             width=hist_bar_width,
+                             color=custom_colors['Dlx-CKO Control'],
+                             label='control')
+durationHist_nonChain_ax.bar([xval + 0.5 * pad_btwnBar + (hist_bar_width / 2) for xval in x_axis],
+                             normalized_counts[1],
+                             width=hist_bar_width,
+                             color=custom_colors['Dlx-CKO'],
+                             label='Dlx-CKO')
+durationHist_nonChain_ax.set_xlim(0, 100)
+durationHist_nonChain_ax.set_ylim(0, 1)
+durationHist_nonChain_ax.set_yticks([0.25, 0.5, 0.75])
+durationHist_nonChain_ax.set_title('non-chain grooming bout duration', fontdict={'fontsize': 'medium'})
+durationHist_nonChain_ax.set_xlabel('duration (s)', fontdict={'fontsize': 'medium'}, labelpad=0)
+durationHist_nonChain_ax.set_ylabel('event quotient', fontdict={'fontsize': 'small'})
+
+counts, bins, patches = temp_ax.hist([chains_df.query('genotype=="control"')['duration_seconds'].to_list(),
+                                      chains_df.query('genotype=="Dlx-CKO"')['duration_seconds'].to_list()],
+                                     bins=list(range(0, 24, 3)),
+                                     color=[custom_colors['Dlx-CKO Control'],
+                                            custom_colors['Dlx-CKO']])
+normalized_counts = list()
+for count_genotype in counts:
+    normalized_counts.append([count / max(count_genotype) for count in count_genotype])
+
+x_axis = [x - 1.5 for x in bins[1:]]
+hist_bar_width = 1.25
+durationHist_chain_ax.bar([xval - 0.5 * pad_btwnBar - (hist_bar_width / 2) for xval in x_axis],
+                             normalized_counts[0],
+                             width=hist_bar_width,
+                             color=custom_colors['Dlx-CKO Control'],
+                             label='control')
+durationHist_chain_ax.bar([xval + 0.5 * pad_btwnBar + (hist_bar_width / 2) for xval in x_axis],
+                             normalized_counts[1],
+                             width=hist_bar_width,
+                             color=custom_colors['Dlx-CKO'],
+                             label='Dlx-CKO')
+durationHist_chain_ax.set_ylim(0, 1)
+durationHist_chain_ax.set_yticks([0.25, 0.5, 0.75])
+durationHist_chain_ax.set_xticks([3, 9, 15, 21])
+durationHist_chain_ax.set_title('syntactic chain duration', fontdict={'fontsize': 'medium'})
+durationHist_chain_ax.set_xlabel('duration (s)', fontdict={'fontsize': 'medium'}, labelpad=0)
+
+
 durationHist_nonChain_ax.spines['top'].set_visible(False)
 durationHist_nonChain_ax.spines['right'].set_visible(False)
 durationHist_chain_ax.spines['top'].set_visible(False)
 durationHist_chain_ax.spines['right'].set_visible(False)
-# durationHist_chain_ax.set_xlim(0, 100)
-#
-#     bouts_df.query('genotype=="Dlx-CKO"').hist(ax=durationHist_nonChain_ax,
-#                                                column='bout_duration',
-#                                                alpha=1,
-#                                                color=color_dict['Dlx-CKO'],
-#                                                bins=10)
-# durationHist_nonChain_ax = bouts_df.query('genotype=="control"').hist(ax=durationHist_nonChain_ax,
-#                                                column='bout_duration',
-#                                                alpha=0.5,
-#                                                color=color_dict['control'],
-#                                                bins=10)
-
 
 # Syntactic chains (Fig 4D)
 chainQuantity_nonChain_ax = paired_bar_chart(chainQuantity_nonChain_ax,
                                              columns_dict,
                                              trials_with_chains_mean_sem,
-                                             '# chains/trial',
+                                             'chains/trial',
                                              [0, 3.75],
                                              [1, 2, 3],
-                                          pad_btwnBar=0.01)
+                                             pad_btwnBar=0.01)
 chainQuantity_chain_ax = paired_bar_chart(chainQuantity_chain_ax,
                                           columns_dict,
                                           trials_with_chains_mean_sem,
@@ -434,19 +427,20 @@ chainQuantity_chain_ax.spines['right'].set_visible(False)
 distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
                                          columns_dict,
                                          trials_with_chains_mean_sem,
-                                         '# of occurences/trial',
+                                         'occurences/trial',
                                          [0, 5],
                                          [2, 4],
-                                          pad_btwnBar=0.01)
+                                         pad_btwnBar=0.01)
 
 oneThird = float(1 / 3)
 twoThird = float(2 / 3)
 
-totalGrooming_gs.tight_layout(fig, rect=[0, twoThird, 0.5, 1], pad=0.2)
+totalGrooming_total_nonChain_gs.tight_layout(fig, rect=[0, twoThird, oneThird, 1], pad=0.2)
+totalGrooming_chain_gs.tight_layout(fig, rect=[oneThird, twoThird, 0.5, 1], pad=0.2)
 initiationsPerMin_gs.tight_layout(fig, rect=[0.5, twoThird, 1, 1], pad=0.2, w_pad=1)
 durationHist_gs.tight_layout(fig, rect=[0, oneThird, 1, twoThird], pad=0.2)
 chainQuantity_gs.tight_layout(fig, rect=[0, 0, 0.5, oneThird], pad=0.2, w_pad=1)
 distributionPhases_gs.tight_layout(fig, rect=[0.5, 0, 1, oneThird], pad=0.2)
 
-plt.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure3/fig4_{today_str}.pdf')
+fig.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure4/fig4_{today_str}.pdf')
 plt.close('all')
