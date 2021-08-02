@@ -777,7 +777,9 @@ class DlxGrooming(Experiment):
         for idx, chain_row in all_bout_chains.iterrows():
             duration = (int(chain_row['end frame']) - int(chain_row['start frame']))/100
             complete = False
-            if '4' in chain_row['chain choreography']:
+            if '2' not in chain_row['chain choreography'] and '3' not in chain_row['chain choreography']:
+                continue
+            elif '4' in chain_row['chain choreography']:
                 complete = True
 
             chain_chor = list(map(int, chain_row['chain choreography'].split('-')))
@@ -801,6 +803,7 @@ class DlxGrooming(Experiment):
                         skips += 1
             chain = GroomingChain.query.filter_by(grooming_trial_id=bout.grooming_trial_id,
                                                   start_frame=chain_row['start frame']).first()
+
             if chain is None:
                 GroomingChain(grooming_bout_id=bout.grooming_bout_id,
                               grooming_trial_id=bout.grooming_trial_id,

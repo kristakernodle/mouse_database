@@ -6,8 +6,7 @@ import matplotlib
 from matplotlib.patches import Patch
 from datetime import date
 
-from data_visualization.plot_functions import get_mean_sem, genotype_cleanup, Column, create_stacked_bar_chart, \
-    format_ax, paired_bar_chart
+from data_visualization.plot_functions import genotype_cleanup, Column, paired_bar_chart
 
 today_str = dbpkg.Date(date.today().strftime('%Y%m%d')).yyyymmdd
 
@@ -25,6 +24,7 @@ bouts_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
                                               dbpkg.GroomingTrial.grooming_trial_id,
                                               dbpkg.GroomingTrial.trial_num,
                                               dbpkg.GroomingBout.grooming_bout_id,
+                                              dbpkg.GroomingBout.bout_string,
                                               dbpkg.GroomingBout.bout_length) \
                        .join(dbpkg.Session, dbpkg.Session.mouse_id == dbpkg.Mouse.mouse_id) \
                        .join(dbpkg.GroomingTrial, dbpkg.GroomingTrial.session_id == dbpkg.Session.session_id) \
@@ -33,11 +33,38 @@ bouts_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
                        .statement,
                        dbpkg.db.session.bind)
 
+bouts_only_df = pd.read_sql(dbpkg.db.session.query(dbpkg.GroomingTrial.grooming_trial_id,
+                                              dbpkg.GroomingBout.grooming_bout_id,
+                                              dbpkg.GroomingBout.bout_string,
+                                              dbpkg.GroomingBout.bout_length) \
+                       .join(dbpkg.GroomingBout,
+                             dbpkg.GroomingBout.grooming_trial_id == dbpkg.GroomingTrial.grooming_trial_id) \
+                       .statement,
+                       dbpkg.db.session.bind)
+
+def count_boutPhases(bout_string_srs: pd.Series, phase_num):
+    phase_count = []
+    for item in bout_string_srs:
+        item_list = item.strip().split('-')
+        while '' in item_list:
+            item_list.remove('')
+        phase_count.append(list(map(int, item_list)).count(phase_num))
+    return phase_count
+
+
+bouts_only_df.insert(bouts_only_df.shape[1], 'phase_1', count_boutPhases(bouts_only_df['bout_string'], phase_num=1))
+bouts_only_df.insert(bouts_only_df.shape[1], 'phase_2', count_boutPhases(bouts_only_df['bout_string'], phase_num=2))
+bouts_only_df.insert(bouts_only_df.shape[1], 'phase_3', count_boutPhases(bouts_only_df['bout_string'], phase_num=3))
+bouts_only_df.insert(bouts_only_df.shape[1], 'phase_4', count_boutPhases(bouts_only_df['bout_string'], phase_num=4))
+
 bouts_df['bout_duration'] = bouts_df['bout_length']
 
-temp_bouts_df = bouts_df
-temp_bouts_df['genotype'] = temp_bouts_df.apply(lambda x: genotype_cleanup(x), axis=1)
-temp_bouts_df.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_bouts_{today_str}.csv')
+temp_bouts_df = bouts_only_df
+bouts_df['genotype'] = bouts_df.apply(lambda x: genotype_cleanup(x), axis=1)
+bouts_df.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_bouts_{today_str}.csv')
+
+temp_bouts_df = temp_bouts_df.groupby('grooming_trial_id').agg(sum)
+temp_bouts_df = temp_bouts_df.rename_axis('grooming_trial_id').reset_index()
 
 chains_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
                                                dbpkg.Mouse.eartag,
@@ -136,6 +163,8 @@ trials_df = pd.read_sql(dbpkg.db.session.query(dbpkg.Mouse.mouse_id,
 temp_trials_df = trials_df
 temp_trials_df['genotype'] = temp_trials_df.apply(lambda x: genotype_cleanup(x), axis=1)
 
+trials_with_bouts = pd.merge(temp_trials_df, temp_bouts_df, on=['grooming_trial_id'], how='left', validate="1:m")
+
 trials_with_chains = pd.merge(temp_trials_df, chains_by_trial_df, on=['grooming_trial_id'], how='left')
 trials_with_chains['chain_duration'] = trials_with_chains['chain_duration'].fillna(0)
 
@@ -212,7 +241,8 @@ trials_with_chains.insert(trials_with_chains.shape[1], 'atypicalEnd_percentAtypi
 trials_with_chains.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_chains_nonchains_{today_str}.csv')
 trials_with_chains_mean_sem = trials_with_chains.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
 
-
+trials_with_bouts_mean_sem = trials_with_bouts.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+trials_with_bouts.to_csv(f'/Users/Krista/OneDrive - Umich/figures/grooming_trials_bouts_{today_str}.csv')
 # Plotting
 
 
@@ -286,10 +316,10 @@ columns_dict = {
                            Column('chains_perMin', 'chain', hatch=None, alpha=None)],
     chainQuantity_nonChain_ax: [Column("num_complete_chains", 'complete', hatch=None, alpha=None)],
     chainQuantity_chain_ax: [Column('num_incomplete_chains', 'incomplete', hatch=None, alpha=0.5)],
-    distributionPhases_ax: [Column("grooming_phase_1", 'ellipse', hatch=None, alpha=1),
-                            Column("grooming_phase_2", 'unilteral\nstrokes', hatch=None, alpha=1),
-                            Column("grooming_phase_3", 'bilateral\nstrokes', hatch=None, alpha=1),
-                            Column("grooming_phase_4", 'body licks', hatch=None, alpha=1)]
+    distributionPhases_ax: [Column("phase_1", 'ellipse', hatch=None, alpha=1),
+                            Column("phase_2", 'unilteral\nstrokes', hatch=None, alpha=1),
+                            Column("phase_3", 'bilateral\nstrokes', hatch=None, alpha=1),
+                            Column("phase_4", 'body licks', hatch=None, alpha=1)]
 }
 
 # Total Grooming Time (Fig 4A)
@@ -318,11 +348,6 @@ initiationsPerMin_ax = paired_bar_chart(initiationsPerMin_ax,
                                         [1, 3, 5],
                                         pad_btwnBar=0.01)
 
-initiationsPerMin_ax.plot([1-bar_width/2, 1+bar_width/2], [4.75, 4.75], color='black', linewidth=1.0)
-initiationsPerMin_ax.annotate('*',
-                               xy=(1, 4.75),
-                               xycoords='data',
-                               ha='center')
 initiationsPerMin_ax.plot([2-bar_width / 2, 2+bar_width / 2], [1.8, 1.8], color='black', linewidth=1.0)
 initiationsPerMin_ax.annotate('*',
                                     xy=(2, 1.8),
@@ -353,18 +378,16 @@ for count_genotype in counts:
 pad_btwnBar = 0.01
 x_axis = [x - 2.5 for x in bins[1:]]
 hist_bar_width = 2
-durationHist_nonChain_ax.bar([xval - 0.5 * pad_btwnBar - (hist_bar_width / 2) for xval in x_axis],
+durationHist_nonChain_ax.plot([xval - 0.5 * pad_btwnBar - (hist_bar_width / 2) for xval in x_axis],
                              normalized_counts[0],
-                             width=hist_bar_width,
                              color=custom_colors['Dlx-CKO Control'],
                              label='control')
-durationHist_nonChain_ax.bar([xval + 0.5 * pad_btwnBar + (hist_bar_width / 2) for xval in x_axis],
+durationHist_nonChain_ax.plot([xval + 0.5 * pad_btwnBar + (hist_bar_width / 2) for xval in x_axis],
                              normalized_counts[1],
-                             width=hist_bar_width,
                              color=custom_colors['Dlx-CKO'],
                              label='Dlx-CKO')
 durationHist_nonChain_ax.set_xlim(0, 100)
-durationHist_nonChain_ax.set_ylim(0, 1)
+durationHist_nonChain_ax.set_ylim(0, 1.1)
 durationHist_nonChain_ax.set_yticks([0.25, 0.5, 0.75])
 durationHist_nonChain_ax.set_title('non-chain grooming bout duration', fontdict={'fontsize': 'medium'})
 durationHist_nonChain_ax.set_xlabel('duration (s)', fontdict={'fontsize': 'medium'}, labelpad=0)
@@ -381,17 +404,15 @@ for count_genotype in counts:
 
 x_axis = [x - 1.5 for x in bins[1:]]
 hist_bar_width = 1.25
-durationHist_chain_ax.bar([xval - 0.5 * pad_btwnBar - (hist_bar_width / 2) for xval in x_axis],
+durationHist_chain_ax.plot(x_axis,
                              normalized_counts[0],
-                             width=hist_bar_width,
                              color=custom_colors['Dlx-CKO Control'],
                              label='control')
-durationHist_chain_ax.bar([xval + 0.5 * pad_btwnBar + (hist_bar_width / 2) for xval in x_axis],
+durationHist_chain_ax.plot(x_axis,
                              normalized_counts[1],
-                             width=hist_bar_width,
                              color=custom_colors['Dlx-CKO'],
                              label='Dlx-CKO')
-durationHist_chain_ax.set_ylim(0, 1)
+durationHist_chain_ax.set_ylim(0, 1.1)
 durationHist_chain_ax.set_yticks([0.25, 0.5, 0.75])
 durationHist_chain_ax.set_xticks([3, 9, 15, 21])
 durationHist_chain_ax.set_title('syntactic chain duration', fontdict={'fontsize': 'medium'})
@@ -423,14 +444,19 @@ chainQuantity_chain_ax.yaxis.tick_left()
 chainQuantity_chain_ax.yaxis.set_tick_params(labelleft=True)
 chainQuantity_chain_ax.spines['right'].set_visible(False)
 
-# Grooming Phase Distribution (Fig 4E)
+# Grooming Phase Distribution (Fig 4F)
 distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
                                          columns_dict,
-                                         trials_with_chains_mean_sem,
+                                         trials_with_bouts_mean_sem,
                                          'occurences/trial',
-                                         [0, 5],
-                                         [2, 4],
+                                         [0, 45],
+                                         [10, 20, 30, 40],
                                          pad_btwnBar=0.01)
+distributionPhases_ax.plot([0-bar_width / 2, 0+bar_width / 2], [17, 17], color='black', linewidth=1.0)
+distributionPhases_ax.annotate('*',
+                               xy=(0, 17),
+                               xycoords='data',
+                               ha='center')
 
 oneThird = float(1 / 3)
 twoThird = float(2 / 3)
