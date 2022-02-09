@@ -2,7 +2,7 @@ import pandas as pd
 from data_visualization.plot_functions import plot_success_rate, plot_trial_numbers, plot_reach_score_percent_heatmap
 
 
-all_scored_trials_full_path = '/Users/Krista/OneDrive - Umich/figures/all_scored_trials_df_20201203.csv'
+all_scored_trials_full_path = '/Users/Krista/Desktop/figures/reach_scores_by_eartag_by_session_df_20220130.csv.csv'
 all_scored_trials = pd.read_csv(all_scored_trials_full_path,
                                 usecols=['eartag', 'genotype', 'birthdate', 'sex', 'session_num', 'session_date',
                                          'session_dir', 'folder_dir', 'reviewer', 'trial_dir', 'reach_score',
@@ -84,14 +84,14 @@ for eartag in all_scored_trials.eartag.unique():
 
     score_value_counts = pd.DataFrame.from_records(score_value_counts_list)
     summary_reach_scores["genotype"] = genotype
-
-    plot_success_rate("First Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
-                      genotype=genotype, save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
-    plot_success_rate("Any Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
-                      save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
-
-    plot_trial_numbers("Total Trials", score_value_counts, eartag, genotype)
-    plot_trial_numbers("Viable Trials", score_value_counts, eartag, genotype)
+    #
+    # plot_success_rate("First Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
+    #                   genotype=genotype, save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
+    # plot_success_rate("Any Success", summary_reach_scores, group=False, subtitle=f"{eartag}, Genotype: {genotype}", eartag=eartag,
+    #                   save_dir='/Users/Krista/Desktop/figures/', upper_ylim=70)
+    #
+    # plot_trial_numbers("Total Trials", score_value_counts, eartag, genotype)
+    # plot_trial_numbers("Viable Trials", score_value_counts, eartag, genotype)
 
     for_heatmap = list()
     for i in range(0, len(score_value_counts)):

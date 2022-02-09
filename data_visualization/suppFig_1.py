@@ -292,7 +292,7 @@ def create_legend_patches(ordered_columns):
 
 
 fig = plt.figure()
-w = 5.5
+w = 3.54
 fig.set_figwidth(w)
 fig.set_dpi(1000)
 cap_size = 4
@@ -304,202 +304,81 @@ plt.rcParams['ytick.major.pad'] = -0.5
 color_dict = {"control": custom_colors["Dlx-CKO Control"],
               "Dlx-CKO": custom_colors["Dlx-CKO"]}
 
-totalGrooming_total_nonChain_gs = gridspec.GridSpec(1, 1)
-totalGrooming_total_nonChain_ax = fig.add_subplot(totalGrooming_total_nonChain_gs[0])
-totalGrooming_chain_gs = gridspec.GridSpec(1, 1)
-totalGrooming_chain_ax = fig.add_subplot(totalGrooming_chain_gs[0])
+numTransitions_gs = gridspec.GridSpec(1, 1)
+numTransitions_ax = fig.add_subplot(numTransitions_gs[0])
+# numTransitions_chain_ax = fig.add_subplot(numTransitions_gs[1])
 
-initiationsPerMin_gs = gridspec.GridSpec(1, 1)
-initiationsPerMin_ax = fig.add_subplot(initiationsPerMin_gs[0])
-
-durationHist_gs = gridspec.GridSpec(1, 2)
-durationHist_nonChain_ax = fig.add_subplot(durationHist_gs[0])
-durationHist_chain_ax = fig.add_subplot(durationHist_gs[1])
-
-chainQuantity_gs = gridspec.GridSpec(1, 2)
-chainQuantity_nonChain_ax = fig.add_subplot(chainQuantity_gs[0])
-chainQuantity_chain_ax = fig.add_subplot(chainQuantity_gs[1])
-
-distributionPhases_gs = gridspec.GridSpec(1, 1)
-distributionPhases_ax = fig.add_subplot(distributionPhases_gs[0])
+distributionTransition_gs = gridspec.GridSpec(1, 1)
+distributionTransition_ax = fig.add_subplot(distributionTransition_gs[0])
 
 columns_dict = {
-    totalGrooming_total_nonChain_ax: [Column('totalGrooming_percentTrial', 'total'),
-                                      Column('nonChainGrooming_percentTrial', 'non-chain', hatch='///', alpha=None)],
-    totalGrooming_chain_ax: [Column('chainGrooming_percentTrial', 'chain', hatch=None, alpha=None)],
-    initiationsPerMin_ax: [Column('totalBoutsChains_perMin', 'total'),
-                           Column('bouts_perMin', 'non-chain', hatch='///', alpha=None),
-                           Column('chains_perMin', 'chain', hatch=None, alpha=None)],
-    chainQuantity_nonChain_ax: [Column("num_complete_chains", 'complete', hatch=None, alpha=None)],
-    chainQuantity_chain_ax: [Column('num_incomplete_chains', 'incomplete', hatch=None, alpha=0.5)],
-    distributionPhases_ax: [Column("phase_1", 'ellipse', hatch=None, alpha=1),
-                            Column("phase_2", 'unilateral\nstrokes', hatch=None, alpha=1),
-                            Column("phase_3", 'bilateral\nstrokes', hatch=None, alpha=1),
-                            Column("phase_4", 'body licks', hatch=None, alpha=1)]
-}
+    numTransitions_ax: [Column('num_typical_transitions', 'typical', hatch=None, alpha=1),
+                        Column('num_atypical_transitions', 'atypical', hatch=None, alpha=0.5)],
+    distributionTransition_ax: [Column("skips_percentAtypicalTransitions", 'skip', hatch=None, alpha=1),
+                                Column("reverse_percentAtypicalTransitions", 'reverse', hatch=None, alpha=0.6),
+                                Column('atypicalEnd_percentAtypicalTransitions', 'premature\ntermination', hatch=None,
+                                alpha=0.3)]}
 
-# Total Grooming Time (Fig 4A)
-totalGrooming_total_nonChain_ax = paired_bar_chart(totalGrooming_total_nonChain_ax,
-                                                   columns_dict,
-                                                   trials_with_chains_mean_sem,
-                                                   'time spent (% trial)',
-                                                   [0, 35],
-                                                   [10, 20, 30],
-                                                   pad_btwnBar=0.01)
+# Number of transitions
 
-totalGrooming_chain_ax = paired_bar_chart(totalGrooming_chain_ax,
-                                          columns_dict,
-                                          trials_with_chains_mean_sem,
-                                          None,
-                                          [0, 5],
-                                          [2, 4],
-                                          pad_btwnBar=0.01)
+numTransitions_ax = paired_bar_chart(numTransitions_ax,
+                                              columns_dict,
+                                              trials_with_chains_mean_sem,
+                                              'transitions/trial',
+                                              [0, 10],
+                                              [3, 6, 9],
+                                              title=None)
 
-# Initiations per Minute Grooming (Fig 4B)
-initiationsPerMin_ax = paired_bar_chart(initiationsPerMin_ax,
-                                        columns_dict,
-                                        trials_with_chains_mean_sem,
-                                        'initiations/min grooming',
-                                        [0, 5.5],
-                                        [1, 3, 5],
-                                        pad_btwnBar=0.01)
+# numberTransitions_orderedColumns = columns_dict[numTransitions_nonChain_ax]
+# numberTransitions_mean, numberTransitions_sem = get_mean_sem(trials_with_chains_mean_sem,
+#                                                              numberTransitions_orderedColumns)
+# numTransitions_nonChain_ax = create_stacked_bar_chart(numTransitions_nonChain_ax,
+#                                              numberTransitions_mean,
+#                                              numberTransitions_sem,
+#                                              numberTransitions_orderedColumns)
+# numTransitions_nonChain_ax = format_ax(numTransitions_nonChain_ax,
+#                               ylim=[0, 17],
+#                               yticks=[5, 10, 15],
+#                               ylabel="number of transitions\n(per trial)",
+#                               title='phase transitions')
+#
+# legend_elements = create_legend_patches(numberChains_orderedColumns)
+# numTransitions_nonChain_ax.legend(handles=legend_elements,
+#                         loc='right',
+#                         frameon=False,
+#                         fancybox=False,
+#                         fontsize='small')
 
-initiationsPerMin_ax.plot([2 - bar_width / 2, 2 + bar_width / 2], [1.8, 1.8], color='black', linewidth=1.0)
-initiationsPerMin_ax.annotate('*',
-                              xy=(2, 1.8),
-                              xycoords='data',
-                              ha='center')
-
-# Duration Distribution (histogram) (Fig 4C)
-pad_btwnBar = 0.01
-hist_bar_width = 2
-controlBouts = bouts_df.query('genotype=="control"')['bout_duration'].to_list()
-KOBouts = bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()
-
-temp_fig = plt.figure()
-temp_ax = temp_fig.add_subplot()
-
-counts, bins, patches = temp_ax.hist([bouts_df.query('genotype=="control"')['bout_duration'].to_list(),
-                                      bouts_df.query('genotype=="Dlx-CKO"')['bout_duration'].to_list()],
-                                     bins=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95,
-                                           100],
-                                     color=[custom_colors['Dlx-CKO Control'],
-                                            custom_colors['Dlx-CKO']])
-x_axis = [x - 2.5 for x in bins[1:]]
-durationHist_nonChain_ax.plot(x_axis,
-                              counts[0],
-                              color=custom_colors['Dlx-CKO Control'],
-                              label='control')
-durationHist_nonChain_ax.set_xlim(0, 100)
-durationHist_nonChain_ax.set_ylim(0, 40)
-durationHist_nonChain_ax.set_yticks([10, 20, 30])
-durationHist_nonChain_ax.set_title('non-chain grooming bout duration', fontdict={'fontsize': 'medium'})
-durationHist_nonChain_ax.set_xlabel('duration (s)', fontdict={'fontsize': 'medium'}, labelpad=0)
-durationHist_nonChain_ax.set_ylabel('events (control)', fontdict={'fontsize': 'small',
-                                                                  'color': custom_colors['Dlx-CKO Control']})
-durationHist_nonChain_ax2 = durationHist_nonChain_ax.twinx()
-durationHist_nonChain_ax2.plot(x_axis,
-                               counts[1],
-                               color=custom_colors['Dlx-CKO'],
-                               label='Dlx-CKO')
-durationHist_nonChain_ax2.set_ylim(0, 103)
-durationHist_nonChain_ax2.set_yticks([20, 40, 60, 80])
-durationHist_nonChain_ax2.set_ylabel('events (Dlx-CKO)', labelpad=10, fontdict={'fontsize': 'small',
-                                                                                'color': custom_colors['Dlx-CKO'],
-                                                                                'rotation': 270})
-
-durationHist_nonChain_ax.spines['top'].set_visible(False)
-durationHist_nonChain_ax.spines['right'].set_visible(False)
-durationHist_nonChain_ax.spines['left'].set_color(custom_colors['Dlx-CKO Control'])
-durationHist_nonChain_ax.yaxis.set_tick_params(colors=custom_colors['Dlx-CKO Control'],
-                                               labelcolor=custom_colors['Dlx-CKO Control'])
-durationHist_nonChain_ax2.spines['top'].set_visible(False)
-durationHist_nonChain_ax2.spines['left'].set_visible(False)
-durationHist_nonChain_ax2.spines['right'].set_color(custom_colors['Dlx-CKO'])
-durationHist_nonChain_ax2.yaxis.set_tick_params(colors=custom_colors['Dlx-CKO'],
-                                                labelcolor=custom_colors['Dlx-CKO'])
-
-counts, bins, patches = temp_ax.hist([chains_df.query('genotype=="control"')['duration_seconds'].to_list(),
-                                      chains_df.query('genotype=="Dlx-CKO"')['duration_seconds'].to_list()],
-                                     bins=list(range(0, 24, 3)),
-                                     color=[custom_colors['Dlx-CKO Control'],
-                                            custom_colors['Dlx-CKO']])
-x_axis = [x - 1.5 for x in bins[1:]]
-durationHist_chain_ax.plot(x_axis,
-                           counts[0],
-                           color=custom_colors['Dlx-CKO Control'],
-                           label='control')
-durationHist_chain_ax.set_ylim(0, 22)
-durationHist_chain_ax.set_yticks([5, 10, 15])
-durationHist_chain_ax.set_xticks([3, 9, 15, 21])
-durationHist_chain_ax.set_title('syntactic chain duration', fontdict={'fontsize': 'medium'})
-durationHist_chain_ax.set_xlabel('duration (s)', fontdict={'fontsize': 'medium'}, labelpad=0)
-durationHist_chain_ax.set_ylabel('events (control)', labelpad=2, fontdict={'fontsize': 'small',
-                                                                           'color': custom_colors['Dlx-CKO Control']})
-durationHist_chain_ax2 = durationHist_chain_ax.twinx()
-durationHist_chain_ax2.plot(x_axis,
-                               counts[1],
-                               color=custom_colors['Dlx-CKO'],
-                               label='Dlx-CKO')
-durationHist_chain_ax2.set_ylim(0, 34)
-durationHist_chain_ax2.set_yticks([10, 20, 30])
-durationHist_chain_ax2.set_ylabel('events (Dlx-CKO)', labelpad=10, fontdict={'fontsize': 'small',
-                                                                                'color': custom_colors['Dlx-CKO'],
-                                                                                'rotation': 270})
-durationHist_chain_ax.spines['top'].set_visible(False)
-durationHist_chain_ax.spines['right'].set_visible(False)
-durationHist_chain_ax.spines['left'].set_color(custom_colors['Dlx-CKO Control'])
-durationHist_chain_ax.yaxis.set_tick_params(colors=custom_colors['Dlx-CKO Control'],
-                                               labelcolor=custom_colors['Dlx-CKO Control'])
-durationHist_chain_ax2.spines['top'].set_visible(False)
-durationHist_chain_ax2.spines['left'].set_visible(False)
-durationHist_chain_ax2.spines['right'].set_color(custom_colors['Dlx-CKO'])
-durationHist_chain_ax2.yaxis.set_tick_params(colors=custom_colors['Dlx-CKO'],
-                                                labelcolor=custom_colors['Dlx-CKO'])
-
-# Syntactic chains (Fig 4D)
-chainQuantity_nonChain_ax = paired_bar_chart(chainQuantity_nonChain_ax,
+# Distribution of atypical transitions (Fig 3G)
+distributionTransition_ax = paired_bar_chart(distributionTransition_ax,
                                              columns_dict,
                                              trials_with_chains_mean_sem,
-                                             'chains/trial',
-                                             [0, 3.75],
-                                             [1, 2, 3],
-                                             pad_btwnBar=0.01)
-chainQuantity_chain_ax = paired_bar_chart(chainQuantity_chain_ax,
-                                          columns_dict,
-                                          trials_with_chains_mean_sem,
-                                          None,
-                                          [0, 0.75],
-                                          [0.2, 0.4, 0.6],
-                                          pad_btwnBar=0.01)
-chainQuantity_chain_ax.yaxis.set_label_position("right")
-chainQuantity_chain_ax.yaxis.tick_left()
-chainQuantity_chain_ax.yaxis.set_tick_params(labelleft=True)
-chainQuantity_chain_ax.spines['right'].set_visible(False)
-
-# Grooming Phase Distribution (Fig 4F)
-distributionPhases_ax = paired_bar_chart(distributionPhases_ax,
-                                         columns_dict,
-                                         trials_with_bouts_mean_sem,
-                                         'occurences/trial',
-                                         [0, 45],
-                                         [10, 20, 30, 40],
-                                         pad_btwnBar=0.01)
-distributionPhases_ax.plot([0 - bar_width / 2, 0 + bar_width / 2], [17, 17], color='black', linewidth=1.0)
-distributionPhases_ax.annotate('*',
-                               xy=(0, 17),
-                               xycoords='data',
-                               ha='center')
-
-oneThird = float(1 / 3)
-twoThird = float(2 / 3)
-
-totalGrooming_total_nonChain_gs.tight_layout(fig, rect=[0, twoThird, oneThird, 1], pad=0.2)
-totalGrooming_chain_gs.tight_layout(fig, rect=[oneThird, twoThird, 0.5, 1], pad=0.2)
-initiationsPerMin_gs.tight_layout(fig, rect=[0.5, twoThird, 1, 1], pad=0.2, w_pad=1)
-durationHist_gs.tight_layout(fig, rect=[0, oneThird, 1, twoThird], pad=0.2, w_pad=1)
-chainQuantity_gs.tight_layout(fig, rect=[0, 0, 0.5, oneThird], pad=0.2, w_pad=1)
-distributionPhases_gs.tight_layout(fig, rect=[0.5, 0, 1, oneThird], pad=0.2)
-
-fig.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure4/fig4_{today_str}.pdf')
+                                             '% atypical transitions',
+                                             [0, 75],
+                                             [20, 40, 60],
+                                             title=None)
+# distributionTransition_ax.tick_params('x', labelrotation=90)
+# distributionTransitions_orderedColumns = columns_dict[distributionTransition_ax]
+# distributionTransitions_mean, distributionTransitions_sem = get_mean_sem(trials_with_chains_mean_sem,
+#                                                                          distributionTransitions_orderedColumns)
+# distributionTransition_ax = create_stacked_bar_chart(distributionTransition_ax,
+#                                                      distributionTransitions_mean,
+#                                                      distributionTransitions_sem,
+#                                                      distributionTransitions_orderedColumns)
+# distributionTransition_ax = format_ax(distributionTransition_ax,
+#                                       ylim=[0, 110],
+#                                       yticks=[25, 50, 75, 100],
+#                                       ylabel='proportion of transitions\n(% of atypical transitions)',
+#                                       title='distribution of\natypical transitions',
+#                                       titleloc='right')
+#
+# legend_elements = create_legend_patches(distributionTransitions_orderedColumns)
+# distributionTransition_ax.legend(handles=legend_elements,
+#                                  loc='upper center',
+#                                  frameon=False,
+#                                  fancybox=False,
+#                                  fontsize='small')
+numTransitions_gs.tight_layout(fig, rect=[0, 0.5, 1, 1], pad=0.2, w_pad=1)
+distributionTransition_gs.tight_layout(fig, rect=[0, 0, 1, 0.5], pad=0.2)
+fig.savefig(f'/Users/Krista/OneDrive - Umich/figures/figures_ai/figure4/suppfig1_{today_str}.pdf')
 plt.close('all')

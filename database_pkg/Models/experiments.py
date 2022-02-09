@@ -323,28 +323,57 @@ class DlxSkilledReaching(Experiment):
               f"Number of Blind Folders Not Scored: {len(all_blind_folders_not_scored)}\n")
 
     def get_all_scored_trials(self):
-        all_scored_trials_list = SRTrialScore.query.join(Trial, SRTrialScore.trial_id == Trial.trial_id).filter(
-            Trial.experiment_id == self.experiment_id).all()
-        all_scored_trials_listdict = list()
-        for scored_trial in all_scored_trials_list:
-            trial = Trial.query.get(scored_trial.trial_id)
-            session = Session.query.get(trial.session_id)
-            mouse = Mouse.query.get(session.mouse_id)
-            reviewer = Reviewer.query.get(scored_trial.reviewer_id)
-            all_scored_trials_listdict.append(
-                {'eartag': mouse.eartag,
-                 'genotype': mouse.genotype,
-                 'birthdate': mouse.birthdate,
-                 'sex': mouse.sex,
-                 'session_dir': session.session_dir,
-                 'session_num': session.session_num,
-                 'session_date': session.session_date,
-                 'reviewer': f"{reviewer.first_name} {reviewer.last_name}",
-                 'trial_dir': trial.trial_dir,
-                 'reach_score': scored_trial.reach_score,
-                 'abnormal_movt_score': scored_trial.abnormal_movt_score,
-                 'grooming_score': scored_trial.grooming_score})
-        return pd.DataFrame.from_records(all_scored_trials_listdict)
+        all_scored_trials = pd.read_sql(
+            db.session.query(Mouse.eartag,
+                             Mouse.sex,
+                             Mouse.birthdate,
+                             Mouse.genotype,
+                             Session.session_date,
+                             Session.session_dir,
+                             Session.session_num,
+                             Experiment.experiment_name,
+                             Trial.trial_dir,
+                             Trial.trial_date,
+                             Trial.trial_num,
+                             Reviewer.first_name,
+                             Reviewer.last_name,
+                             SRTrialScore.reach_score,
+                             SRTrialScore.grooming_score,
+                             SRTrialScore.abnormal_movt_score) \
+                .join(Session, Session.mouse_id == Mouse.mouse_id) \
+                .join(Experiment, Experiment.experiment_id == Session.experiment_id) \
+                .join(Trial, Trial.session_id == Session.session_id) \
+                .join(SRTrialScore, SRTrialScore.trial_id == Trial.trial_id) \
+                .join(Reviewer, Reviewer.reviewer_id == SRTrialScore.reviewer_id) \
+                .statement,
+            db.session.bind)
+
+        all_scored_trials = all_scored_trials.loc[all_scored_trials['experiment_name'] == self.experiment_name]
+
+
+        #
+        # all_scored_trials_list = SRTrialScore.query.join(Trial, SRTrialScore.trial_id == Trial.trial_id).filter(
+        #     Trial.experiment_id == self.experiment_id).all()
+        # all_scored_trials_listdict = list()
+        # for scored_trial in all_scored_trials_list:
+        #     trial = Trial.query.get(scored_trial.trial_id)
+        #     session = Session.query.get(trial.session_id)
+        #     mouse = Mouse.query.get(session.mouse_id)
+        #     reviewer = Reviewer.query.get(scored_trial.reviewer_id)
+        #     all_scored_trials_listdict.append(
+        #         {'eartag': mouse.eartag,
+        #          'genotype': mouse.genotype,
+        #          'birthdate': mouse.birthdate,
+        #          'sex': mouse.sex,
+        #          'session_dir': session.session_dir,
+        #          'session_num': session.session_num,
+        #          'session_date': session.session_date,
+        #          'reviewer': f"{reviewer.first_name} {reviewer.last_name}",
+        #          'trial_dir': trial.trial_dir,
+        #          'reach_score': scored_trial.reach_score,
+        #          'abnormal_movt_score': scored_trial.abnormal_movt_score,
+        #          'grooming_score': scored_trial.grooming_score})
+        return all_scored_trials
 
 
 class DYT1SkilledReaching(DlxSkilledReaching):
@@ -775,7 +804,7 @@ class DlxGrooming(Experiment):
     def _update_chains(self, bout: GroomingBout, all_bout_chains):
         all_bout_chains = all_bout_chains.reset_index(drop=True)
         for idx, chain_row in all_bout_chains.iterrows():
-            duration = (int(chain_row['end frame']) - int(chain_row['start frame']))/100
+            duration = (int(chain_row['end frame']) - int(chain_row['start frame'])) / 100
             complete = False
             if '2' not in chain_row['chain choreography'] and '3' not in chain_row['chain choreography']:
                 continue
@@ -784,7 +813,7 @@ class DlxGrooming(Experiment):
 
             chain_chor = list(map(int, chain_row['chain choreography'].split('-')))
 
-            num_transitions = len(chain_chor)-1
+            num_transitions = len(chain_chor) - 1
             skips = 0
             reverse = 0
             atypical_end = 0
@@ -817,7 +846,7 @@ class DlxGrooming(Experiment):
                               grooming_phase_3=chain_chor.count(3),
                               grooming_phase_4=chain_chor.count(4),
                               num_transitions=len(chain_chor),
-                              num_atypical_transitions=skips+reverse+atypical_end,
+                              num_atypical_transitions=skips + reverse + atypical_end,
                               num_skips=skips,
                               num_reverse=reverse,
                               num_atypical_end=atypical_end
@@ -841,7 +870,8 @@ class DlxGrooming(Experiment):
                                         num_chains=int(trial_row['Chains']),
                                         num_complete_chains=int(trial_row['Complete Chains']))
             elif trial_row['Description'].strip() == 'bout continue' and new_bout is not None:
-                [idx_video_end] = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'video end'].index.to_list()
+                [idx_video_end] = all_trial_rows['Description'].loc[
+                    lambda x: x.str.strip() == 'video end'].index.to_list()
                 video_end = all_trial_rows.iloc[idx_video_end]
                 new_bout.bout_length += video_end['Frame Number'] - new_bout.start_frame
                 new_bout.bout_string = '-'.join([new_bout.bout_string, trial_row['Sequence']])
@@ -874,7 +904,8 @@ class DlxGrooming(Experiment):
                 continued_flag = False
 
                 if bout.chains_perMin > 0:
-                    self._update_chains(bout, all_trial_chains.iloc[int(chain_idx):int(chain_idx) + int(bout.chains_perMin)])
+                    self._update_chains(bout,
+                                        all_trial_chains.iloc[int(chain_idx):int(chain_idx) + int(bout.chains_perMin)])
                     chain_idx += bout.chains_perMin
 
     def _update_grooming_trials(self):
@@ -908,7 +939,7 @@ class DlxGrooming(Experiment):
             all_trial_idx = list(zip(idx_all_trial_start, idx_all_trial_end))
 
             if len(all_trial_idx) == 0:
-                num_sheets_first_trial = round(len(score_sheet_paths)/2)
+                num_sheets_first_trial = round(len(score_sheet_paths) / 2)
 
                 bouts_1_df = pd.DataFrame()
                 chains_1_df = pd.DataFrame()
@@ -929,7 +960,8 @@ class DlxGrooming(Experiment):
                 bouts_2_df = bouts_2_df.reset_index(drop=True)
                 chains_2_df = chains_2_df.reset_index(drop=True)
 
-                for trial_num, (bouts_df, chains_df) in enumerate([(bouts_1_df, chains_1_df), (bouts_2_df, chains_2_df)]):
+                for trial_num, (bouts_df, chains_df) in enumerate(
+                        [(bouts_1_df, chains_1_df), (bouts_2_df, chains_2_df)]):
                     if 'Chains' not in bouts_df.columns.to_list() or 'Complete Chains' not in bouts_df.columns.to_list():
                         print(f'reformat file: {session.session_dir}')
                         continue
@@ -943,7 +975,8 @@ class DlxGrooming(Experiment):
                     idx_all_bout_end = bouts_df['Description'].loc[lambda x: x == 'bout end'].index.to_list()
                     all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
 
-                    total_frames_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows['Frame Number'].sum()
+                    total_frames_grooming = all_bout_end_rows['Frame Number'].sum() - all_bout_start_rows[
+                        'Frame Number'].sum()
                     num_bouts = len(all_bout_start_rows)
 
                     num_chains = all_bout_start_rows['Chains'].sum()
@@ -955,37 +988,42 @@ class DlxGrooming(Experiment):
                     if grooming_trial is None:
                         GroomingTrial(session_id=session.session_id,
                                       scored_session_dir=session.session_dir,
-                                      trial_num=trial_num+1,
+                                      trial_num=trial_num + 1,
                                       total_time_grooming=total_frames_grooming.item() / 100,
                                       num_bouts=num_bouts,
                                       num_chains=num_chains.item(),
                                       num_complete_chains=num_complete_chains.item()).add_to_db()
 
                         grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
-                                                                       trial_num=trial_num+1).first()
+                                                                       trial_num=trial_num + 1).first()
 
-                    self._update_bouts(grooming_trial, bouts_df, chains_df.iloc[int(chain_idx):int(num_chains)], chain_idx)
+                    self._update_bouts(grooming_trial, bouts_df, chains_df.iloc[int(chain_idx):int(num_chains)],
+                                       chain_idx)
                     chain_idx += num_chains.item()
 
             for trial_num, [trial_start_idx, trial_end_idx] in enumerate(all_trial_idx):
                 chain_idx = 0
                 trial_start_row = bouts_df.iloc[trial_start_idx]
                 trial_end_row = bouts_df.iloc[trial_end_idx]
-                all_trial_rows = bouts_df.iloc[trial_start_idx+1:trial_end_idx]
+                all_trial_rows = bouts_df.iloc[trial_start_idx + 1:trial_end_idx]
 
-                idx_all_bout_start = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'bout start'].index.to_list()
+                idx_all_bout_start = all_trial_rows['Description'].loc[
+                    lambda x: x.str.strip() == 'bout start'].index.to_list()
                 all_bout_start_rows = bouts_df.iloc[idx_all_bout_start]
 
-                idx_all_bout_end = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'bout end'].index.to_list()
+                idx_all_bout_end = all_trial_rows['Description'].loc[
+                    lambda x: x.str.strip() == 'bout end'].index.to_list()
                 all_bout_end_rows = bouts_df.iloc[idx_all_bout_end]
 
                 if len(all_bout_start_rows) != len(all_bout_end_rows):
                     breakpoint()
 
                 try:
-                    idx_video_end = all_trial_rows['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
+                    idx_video_end = all_trial_rows['Description'].loc[
+                        lambda x: x.str.strip() == 'video end'].index.item()
                     row_video_end = bouts_df.iloc[idx_video_end]
-                    trial_length = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] + trial_end_row['Frame Number']) / 100
+                    trial_length = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] + trial_end_row[
+                        'Frame Number']) / 100
                 except ValueError:
                     trial_length = (trial_end_row['Frame Number'] - trial_start_row['Frame Number']) / 100
 
@@ -995,14 +1033,16 @@ class DlxGrooming(Experiment):
                     lambda x: x.str.strip() == 'bout continue'].index.to_list()
                 if len(idx_all_bout_continue) > 0:
                     for continue_idx in idx_all_bout_continue:
-                        rows_before_continue = bouts_df.iloc[trial_start_idx+1:continue_idx]
-                        idx_video_end = rows_before_continue['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
+                        rows_before_continue = bouts_df.iloc[trial_start_idx + 1:continue_idx]
+                        idx_video_end = rows_before_continue['Description'].loc[
+                            lambda x: x.str.strip() == 'video end'].index.item()
                         row_video_end = bouts_df.iloc[idx_video_end]
                         total_frames_grooming += row_video_end['Frame Number']
 
                 try:
-                    rows_trial_start_first_bout = bouts_df.iloc[trial_start_idx+1:idx_all_bout_start[0]]
-                    idx_video_end = rows_trial_start_first_bout['Description'].loc[lambda x: x.str.strip() == 'video end'].index.item()
+                    rows_trial_start_first_bout = bouts_df.iloc[trial_start_idx + 1:idx_all_bout_start[0]]
+                    idx_video_end = rows_trial_start_first_bout['Description'].loc[
+                        lambda x: x.str.strip() == 'video end'].index.item()
                     row_video_end = bouts_df.iloc[idx_video_end]
                     latency_to_onset = (row_video_end['Frame Number'] - trial_start_row['Frame Number'] +
                                         bouts_df.loc[idx_all_bout_start[0]]['Frame Number']) / 100
@@ -1016,11 +1056,11 @@ class DlxGrooming(Experiment):
                 num_complete_chains = all_bout_start_rows['Complete Chains'].sum()
 
                 grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
-                                                               trial_num=trial_num+1).first()
+                                                               trial_num=trial_num + 1).first()
                 if grooming_trial is None:
                     GroomingTrial(session_id=session.session_id,
                                   scored_session_dir=session.session_dir,
-                                  trial_num=trial_num+1,
+                                  trial_num=trial_num + 1,
                                   trial_length=trial_length,
                                   total_time_grooming=total_frames_grooming.item() / 100,
                                   latency_to_onset=latency_to_onset,
@@ -1029,9 +1069,10 @@ class DlxGrooming(Experiment):
                                   num_complete_chains=num_complete_chains.item()).add_to_db()
 
                     grooming_trial = GroomingTrial.query.filter_by(session_id=session.session_id,
-                                                                   trial_num=trial_num+1).first()
+                                                                   trial_num=trial_num + 1).first()
 
-                self._update_bouts(grooming_trial, all_trial_rows, chains_df.iloc[int(chain_idx):int(num_chains)], chain_idx)
+                self._update_bouts(grooming_trial, all_trial_rows, chains_df.iloc[int(chain_idx):int(num_chains)],
+                                   chain_idx)
                 chain_idx += num_chains
 
     def update_from_dirs(self):

@@ -9,7 +9,7 @@ import pandas as pd
 custom_colors = {'Dlx-CKO Control': "#005AB5", "Dlx-CKO": "#DC3220"}
 
 palette = {"Control": 'b', "Knock-Out": 'r'}
-heatmap_palette = {"Control": "Blues", "Knock-Out": "Reds"}
+heatmap_palette = {"Control": sns.color_palette("dark:b", as_cmap=True), "Knock-Out": sns.color_palette("dark:r", as_cmap=True)}
 ctrl_miss_palette = {'contact miss': 'b',
                      'no contact miss': 'b'}
 ko_miss_palette = {'contact miss': 'r',
@@ -36,9 +36,23 @@ def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None
         a_axis.set_xticklabels(list(range(1, 22)))
         plt.setp(a_axis.get_xticklabels(), rotation=90)
         a_axis.set(xlabel="Training Session", ylabel="Assigned Reach Score")
+        # a_axis.set_ylabel_position("right")
+        # a_axis.set_yticklabels(["no pellet",
+        #                         "first success",
+        #                         "multi try success",
+        #                         "drop in box",
+        #                         "pellet knocked off",
+        #                         "pellet remained",
+        #                         "used tongue",
+        #                         "no attempt",
+        #                         "ipsilateral paw",
+        #                         "tongue and paw"])
 
         a_axis.hlines([a.get_text() for a in a_axis.get_yticklabels()], *a_axis.get_xlim(), colors='grey')
         a_axis.vlines([a.get_text() for a in a_axis.get_xticklabels()], *a_axis.get_ylim(), colors='grey')
+
+        a_axis.set_xticklabels(
+            [None, 1, None, 3, None, 5, None, 7, None, 9, None, 11, None, 13, None, 15, None, 17, None, 19, None, 21])
 
         a_axis.spines['top'].set_visible(True)
         a_axis.spines['top'].set_color('grey')
@@ -62,8 +76,6 @@ def plot_reach_score_percent_heatmap(df, group: bool, genotype=None, eartag=None
             sns.heatmap(df[df.genotype == genotype].pivot("reach_score", "session_num", "percent_trials"), cmap=color,
                         vmin=0, vmax=100, center=50)
 
-            axis.set_title(f'Skilled-Reaching Reach Score By Session \n'
-                           f'Average Percent of Trials for {genotype} Group')
             file_name = f'{genotype.lower().strip("-")}_reach_score_heatmap.png'
             format_and_save(figure, axis, file_name)
     else:
@@ -170,7 +182,7 @@ def plot_trial_numbers(trial_type, data, eartag=None, genotype=None, save_dir='/
         sns.scatterplot(x="session_num", y=trial_type, hue='genotype', palette=palette,
                         data=data, legend=False)
         title_string = f"Single Pellet Skilled-Reaching \n" \
-                       f"Number of {trial_type} by Session"
+                       f"Number of Trials by Session"
         file_name = f"{trial_type.lower().strip(' ')}_by_session.png"
     else:
         title_string = f"single Pellet Skilled-Reaching \n " \
@@ -350,7 +362,13 @@ def get_mean_sem(agg_df, columns):
     mean = agg_df[columnTups_mean].sort_index(key=lambda x: x.str.lower())
     sem = agg_df[columnTups_sem].sort_index(key=lambda x: x.str.lower())
 
-    return mean.reset_index(), sem.reset_index()
+    mean = mean.reset_index()
+    mean = mean.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+
+    sem = sem.reset_index()
+    sem = sem.set_index(('genotype',)).transpose().reset_index().set_index('level_0')
+
+    return mean, sem
 
 def genotype_cleanup(df_row):
     if df_row['genotype'] == 'Dlx-CKO Control':

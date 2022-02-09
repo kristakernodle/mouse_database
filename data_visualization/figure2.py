@@ -48,9 +48,9 @@ phScores_df.insert(phScores_df.shape[1], 'forepaw_failure_to_contact',
                    (phScores_df['left_forepaw_failure_to_contact'] +
                     phScores_df['right_forepaw_failure_to_contact']))
 
-phScores_df.to_csv('/Users/Krista/OneDrive - Umich/figures/pastaHandling_20210708.csv')
+phScores_df.to_csv('/Users/Krista/OneDrive - Umich/figures/pastaHandling_20210913.csv')
 
-phScores_trialAgg_df = phScores_df.groupby("genotype").agg([pd.DataFrame.mean, pd.DataFrame.sem])
+phScores_trialAgg_df = phScores_df.agg([pd.DataFrame.mean, pd.DataFrame.sem])
 
 # phScores_trialAgg_df = phScores_trialAgg_df.transpose().reset_index()
 # out = phScores_trialAgg_df.rename(
@@ -72,12 +72,12 @@ atypicalBehavior_ax = plt.subplot2grid((1, 6), (0, 0), colspan=6)
 
 bar_width = 0.35
 
-columns_dict = {atypicalBehavior_ax: [Column('forepaw_failure_to_contact', label='any forepaw\nno contact'),
+columns_dict = {atypicalBehavior_ax: [Column('drops', label="drops"),
+                                      Column('forepaw_failure_to_contact', label='any forepaw\nno contact'),
                                       Column('pasta_long_paws_together', label="pasta long,\npaws together"),
                                       Column('pasta_short_paws_apart', label="pasta short,\npaws apart"),
                                       Column('guide_grasp_switch', label="guide/grasp\nswitch"),
-                                      Column('mouth_pulling', label="mouth\npulling"),
-                                      Column('drops', label="drops")]}
+                                      Column('mouth_pulling', label="mouth\npulling")]}
                 #                       forepawAdjustment_ax: [Column('forepaw_adjustments', label=None)]
 
 # forepawAdjustment_orderedColumns = columns_dict[forepawAdjustment_ax]
@@ -170,7 +170,7 @@ atypicalBehavior_ax.tick_params(axis='x', bottom=False)
 
 ctrl_x = [xval - bar_width / 2 for xval in atypicalBehavior_x]
 ko_x = [xval + bar_width / 2 for xval in atypicalBehavior_x]
-drops_x = [ctrl_x[-1], ko_x[-1]]
+drops_x = [ctrl_x[0], ko_x[0]]
 
 atypicalBehavior_ax.plot(drops_x, [1.75, 1.75], color='black', linewidth=1.0)
 atypicalBehavior_ax.annotate('*',
@@ -180,5 +180,5 @@ atypicalBehavior_ax.annotate('*',
 atypicalBehavior_ax.spines['top'].set_visible(False)
 atypicalBehavior_ax.spines['right'].set_visible(False)
 plt.tight_layout(pad=0.2)
-plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210715.pdf')
+plt.savefig('/Users/Krista/OneDrive - Umich/figures/figures_ai/figure2/fig2_20210913.pdf')
 plt.close('all')

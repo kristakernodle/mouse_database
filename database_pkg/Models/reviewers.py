@@ -30,6 +30,10 @@ class Reviewer(Base):
         super().remove_from_db(my_object=self)
 
     @classmethod
+    def get_by_name(cls, first_name, last_name):
+        return cls.query.filter_by(first_name=first_name, last_name=last_name).first()
+
+    @classmethod
     def reinstate(cls, full_path):
         reviewer_data_frame = read_csv(full_path,
                                        usecols=['reviewer_id', 'first_name', 'last_name', 'toScore_dir',
